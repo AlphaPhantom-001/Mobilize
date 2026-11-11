@@ -1,0 +1,6 @@
+{
+  "name": "Mobilize",
+  "description": "Alpha Voter card database and collation tool for mobilizing voter records.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

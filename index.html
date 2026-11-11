@@ -1,0 +1,3830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>Mobilize — Alpha Voter card database</title>
+  <meta name="description" content="Mobilize — Alpha Voter card data collection, cleaning, and collation tool.">
+  <meta property="og:title" content="Mobilize — Alpha Voter card database">
+  <meta property="og:description" content="Mobilize — Alpha Voter card data collection, cleaning, and collation tool.">
+  <meta property="og:type" content="website">
+  <meta name="twitter:card" content="summary_large_image">
+  
+  <!-- Google Fonts: Bricolage Grotesque (500, 700) & Figtree (400, 500, 600, 700) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;700&family=Figtree:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- CDN Libraries: pdf.js, Tesseract.js, jsPDF + autotable, SheetJS, JSZip -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+
+  <style>
+    :root {
+      --ink: #05161A;
+      --deep: #072E33;
+      --teal: #0C7075;
+      --bright: #0F969C;
+      --mist: #6DA5C0;
+      --slate: #294D61;
+      --tx: #E4F1F3;
+      --mu: #9DBBC6;
+      --amber: #f59e0b;
+      --red: #ef4444;
+      --green: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      background: linear-gradient(180deg, var(--slate) 0%, var(--teal) 14%, var(--deep) 38%, var(--ink) 100%) fixed;
+      color: var(--tx);
+      font-family: 'Figtree', system-ui, -apple-system, sans-serif;
+      font-size: 15px;
+      line-height: 1.5;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+
+    h1, h2, h3, h4, .font-heading {
+      font-family: 'Bricolage Grotesque', system-ui, sans-serif;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: -0.02em;
+    }
+
+    /* Owner approved UI components */
+    .card {
+      background: rgba(5, 22, 26, 0.76);
+      border: 1px solid rgba(109, 165, 192, 0.25);
+      border-radius: 26px;
+      padding: 22px;
+      box-shadow: 0 18px 40px -20px #000;
+      backdrop-filter: blur(14px);
+      -webkit-backdrop-filter: blur(14px);
+    }
+
+    .btn {
+      background: var(--bright);
+      color: var(--ink);
+      border: 0;
+      border-radius: 50px;
+      padding: 11px 22px;
+      font: 600 15px 'Figtree', sans-serif;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      transition: all 0.18s ease;
+      text-decoration: none;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .btn:hover:not(:disabled) {
+      filter: brightness(1.12);
+      transform: translateY(-1px);
+    }
+    .btn:active:not(:disabled) {
+      transform: translateY(1px);
+    }
+    .btn:disabled {
+      opacity: 0.55;
+      cursor: not-allowed;
+      filter: grayscale(0.5);
+    }
+    .btn.alt {
+      background: transparent;
+      color: var(--mist);
+      border: 1px solid var(--mist);
+    }
+    .btn.alt:hover:not(:disabled) {
+      background: rgba(109, 165, 192, 0.12);
+      color: #fff;
+      border-color: #fff;
+    }
+    .btn.sm {
+      padding: 6px 14px;
+      font-size: 13px;
+      border-radius: 50px;
+    }
+    .btn.red {
+      background: #2b3f4d;
+      color: #f2b8b8;
+      border: 1px solid rgba(242, 184, 184, 0.3);
+    }
+    .btn.red:hover:not(:disabled) {
+      background: #3b2528;
+      color: #ffcccc;
+    }
+
+    input, select, textarea {
+      background: var(--deep);
+      color: var(--tx);
+      border: 1px solid var(--slate);
+      border-radius: 50px;
+      padding: 11px 16px;
+      font-family: inherit;
+      font-size: 14px;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+      width: 100%;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: 2px solid var(--mist);
+      outline-offset: 2px;
+      border-color: var(--bright);
+    }
+    textarea {
+      border-radius: 18px;
+      min-height: 80px;
+      resize: vertical;
+    }
+    select {
+      cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236DA5C0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+      background-repeat: no-repeat;
+      background-position: right 14px center;
+      background-size: 14px;
+      padding-right: 36px;
+    }
+
+    .stat {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+      gap: 12px;
+      margin: 18px 0;
+    }
+    .stat div {
+      background: var(--deep);
+      border-radius: 50px;
+      padding: 14px 18px;
+      border: 1px solid rgba(109, 165, 192, 0.2);
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+    }
+    .stat b {
+      font: 700 1.7rem 'Bricolage Grotesque';
+      color: #fff;
+      line-height: 1.1;
+    }
+    .stat span {
+      font-size: 12px;
+      color: var(--mu);
+      font-weight: 500;
+      margin-top: 3px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .bar {
+      display: grid;
+      grid-template-columns: 130px 1fr 45px;
+      gap: 12px;
+      align-items: center;
+      margin: 8px 0;
+      font-size: 13px;
+    }
+    .bar span.lga-lbl {
+      color: var(--tx);
+      font-weight: 500;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .bar-track {
+      background: rgba(7, 46, 51, 0.8);
+      border-radius: 12px;
+      height: 12px;
+      overflow: hidden;
+      border: 1px solid rgba(109, 165, 192, 0.2);
+    }
+    .bar i {
+      display: block;
+      height: 100%;
+      border-radius: 12px;
+      background: linear-gradient(90deg, var(--teal), var(--bright));
+      transition: width 0.4s ease;
+    }
+    .bar span.lga-cnt {
+      text-align: right;
+      color: var(--mist);
+      font-weight: 600;
+      font-family: monospace;
+    }
+
+    .tag {
+      background: var(--mist);
+      color: var(--ink);
+      border-radius: 50px;
+      padding: 2px 11px;
+      font: 600 12px 'Figtree', sans-serif;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+    .tag.amber { background: #fde68a; color: #78350f; }
+    .tag.green { background: #a7f3d0; color: #064e3b; }
+    .tag.red   { background: #fecaca; color: #7f1d1d; }
+
+    /* Layout Header */
+    header.app-header {
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      border-bottom: 1px solid rgba(109, 165, 192, 0.2);
+      background: rgba(5, 22, 26, 0.75);
+      backdrop-filter: blur(12px);
+      position: sticky;
+      top: 0;
+      z-index: 40;
+    }
+    .brand-wrap {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: inherit;
+    }
+    .broom-badge {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      background: rgba(7, 46, 51, 0.9);
+      border: 1.5px solid var(--bright);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 0 14px rgba(15, 150, 156, 0.35);
+      flex-shrink: 0;
+    }
+    .brand-text h1 {
+      font-size: 20px;
+      line-height: 1.1;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .brand-text p {
+      font-size: 11px;
+      color: var(--mu);
+      font-weight: 500;
+      letter-spacing: 0.02em;
+    }
+    .header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+    .status-chip {
+      background: rgba(7, 46, 51, 0.7);
+      border: 1px solid rgba(109, 165, 192, 0.3);
+      border-radius: 50px;
+      padding: 6px 14px;
+      font-size: 12px;
+      color: var(--tx);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 500;
+    }
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--bright);
+      display: inline-block;
+    }
+    .status-dot.pulse {
+      box-shadow: 0 0 0 0 rgba(15, 150, 156, 0.7);
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+      0% { box-shadow: 0 0 0 0 rgba(15, 150, 156, 0.7); }
+      70% { box-shadow: 0 0 0 8px rgba(15, 150, 156, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(15, 150, 156, 0); }
+    }
+
+    /* Navigation tabs */
+    nav.app-nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 14px 20px 4px 20px;
+    }
+    .nav-pills {
+      display: inline-flex;
+      background: rgba(5, 22, 26, 0.6);
+      padding: 4px;
+      border-radius: 50px;
+      border: 1px solid rgba(109, 165, 192, 0.25);
+    }
+    .nav-btn {
+      background: transparent;
+      color: var(--mu);
+      border: 0;
+      border-radius: 50px;
+      padding: 8px 22px;
+      font: 600 14px 'Figtree', sans-serif;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .nav-btn:hover {
+      color: #fff;
+    }
+    .nav-btn.active {
+      background: var(--teal);
+      color: #ffffff;
+      box-shadow: 0 4px 14px rgba(12, 112, 117, 0.4);
+    }
+
+    /* Main Container */
+    main#app {
+      flex: 1;
+      max-width: 1360px;
+      width: 100%;
+      margin: 0 auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+
+    /* Choice Cards in Hub */
+    .hub-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 20px;
+      margin: 20px 0;
+    }
+    .choice-card {
+      background: rgba(7, 46, 51, 0.6);
+      border: 1.5px dashed rgba(109, 165, 192, 0.4);
+      border-radius: 22px;
+      padding: 28px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: all 0.22s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      color: var(--tx);
+    }
+    .choice-card:hover {
+      border-color: var(--bright);
+      background: rgba(12, 112, 117, 0.25);
+      transform: translateY(-2px);
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.4);
+    }
+    .choice-icon {
+      width: 58px;
+      height: 58px;
+      border-radius: 50%;
+      background: rgba(15, 150, 156, 0.15);
+      border: 1px solid rgba(15, 150, 156, 0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--bright);
+    }
+
+    /* Table Toolbar & Filters */
+    .table-toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 14px;
+    }
+    .toolbar-left, .toolbar-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    /* 13-Column Table Styles */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      border-radius: 18px;
+      border: 1px solid rgba(109, 165, 192, 0.25);
+      background: rgba(5, 22, 26, 0.85);
+      box-shadow: 0 12px 30px -10px #000;
+    }
+    table.data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13.5px;
+      min-width: 1200px;
+    }
+    table.data-table th {
+      background: rgba(7, 46, 51, 0.95);
+      color: var(--mist);
+      padding: 12px 10px;
+      font-weight: 600;
+      font-size: 11.5px;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      border-bottom: 2px solid var(--slate);
+      white-space: nowrap;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    table.data-table td {
+      padding: 9px 10px;
+      border-bottom: 1px solid rgba(109, 165, 192, 0.12);
+      color: var(--tx);
+      vertical-align: middle;
+      white-space: nowrap;
+    }
+    table.data-table tbody tr {
+      transition: background 0.15s ease;
+      cursor: pointer;
+    }
+    table.data-table tbody tr:hover {
+      background: rgba(12, 112, 117, 0.18);
+    }
+    table.data-table tr.flagged {
+      border-left: 4px solid var(--amber) !important;
+      background: rgba(245, 158, 11, 0.05);
+    }
+    
+    /* Editable Cell Styling */
+    .editable-cell {
+      outline: none;
+      border-radius: 4px;
+      padding: 3px 6px;
+      min-width: 40px;
+      display: inline-block;
+      transition: background 0.15s, border-bottom 0.15s;
+    }
+    .editable-cell:focus {
+      background: var(--deep);
+      outline: 2px solid var(--bright);
+      color: #fff;
+    }
+    .editable-cell:empty::before,
+    .editable-cell.is-blank::before {
+      content: "—";
+      color: rgba(157, 187, 198, 0.5);
+    }
+    .editable-cell:empty,
+    .editable-cell.is-blank {
+      border-bottom: 1px dashed rgba(109, 165, 192, 0.5);
+    }
+
+    .thumb-cell {
+      width: 44px;
+      height: 44px;
+      border-radius: 8px;
+      overflow: hidden;
+      background: rgba(7, 46, 51, 0.9);
+      border: 1px solid rgba(109, 165, 192, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: zoom-in;
+      transition: transform 0.15s;
+    }
+    .thumb-cell:hover {
+      transform: scale(1.08);
+      border-color: var(--bright);
+    }
+    .thumb-cell img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    /* Stacked Cards for <560px */
+    .mobile-cards-wrap {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .mobile-row-card {
+      background: rgba(5, 22, 26, 0.88);
+      border: 1px solid rgba(109, 165, 192, 0.25);
+      border-radius: 18px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .mobile-row-card.flagged {
+      border-left: 5px solid var(--amber);
+    }
+
+    /* Tree structure for Locations */
+    details.lga-node {
+      background: rgba(7, 46, 51, 0.4);
+      border: 1px solid rgba(109, 165, 192, 0.18);
+      border-radius: 16px;
+      margin-bottom: 8px;
+      overflow: hidden;
+    }
+    details.lga-node[open] {
+      background: rgba(7, 46, 51, 0.65);
+      border-color: rgba(109, 165, 192, 0.35);
+    }
+    summary.lga-summary {
+      padding: 14px 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      user-select: none;
+      font-weight: 600;
+      color: #fff;
+    }
+    .ward-tree-body {
+      padding: 12px 18px 18px 24px;
+      border-top: 1px solid rgba(109, 165, 192, 0.15);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .ward-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: rgba(5, 22, 26, 0.5);
+      border: 1px solid rgba(109, 165, 192, 0.1);
+      font-size: 13.5px;
+    }
+
+    /* Inspector 2-Col Layout */
+    .inspector-layout {
+      display: grid;
+      grid-template-columns: 380px 1fr;
+      gap: 24px;
+    }
+    @media (max-width: 768px) {
+      .inspector-layout {
+        grid-template-columns: 1fr;
+      }
+    }
+    .pvc-preview-box {
+      background: rgba(7, 46, 51, 0.85);
+      border: 1.5px solid rgba(109, 165, 192, 0.35);
+      border-radius: 20px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 280px;
+      cursor: zoom-in;
+      position: relative;
+    }
+    .pvc-preview-box img {
+      max-width: 100%;
+      max-height: 420px;
+      object-fit: contain;
+      border-radius: 12px;
+    }
+
+    /* Overlays / Modals */
+    .overlay-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(5, 22, 26, 0.92);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      z-index: 100;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      animation: fadeIn 0.18s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+    .modal-box {
+      width: 100%;
+      max-width: 580px;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    .lightbox-img-wrap {
+      max-width: 90vw;
+      max-height: 90vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+    .lightbox-img-wrap img {
+      max-width: 100%;
+      max-height: 90vh;
+      object-fit: contain;
+      border-radius: 14px;
+      box-shadow: 0 25px 60px rgba(0,0,0,0.9);
+      border: 1px solid rgba(109, 165, 192, 0.4);
+    }
+    .close-overlay-btn {
+      position: absolute;
+      top: -14px;
+      right: -14px;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--teal);
+      border: 2px solid #fff;
+      color: #fff;
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+
+    /* Toast Notification */
+    #toast-container {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      z-index: 200;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      pointer-events: none;
+    }
+    .toast-msg {
+      pointer-events: auto;
+      background: var(--deep);
+      border: 1px solid var(--bright);
+      color: #fff;
+      border-radius: 50px;
+      padding: 12px 22px;
+      font-size: 13.5px;
+      font-weight: 500;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      animation: slideUp 0.25s ease-out;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(20px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+
+    /* Warning banner */
+    .warning-strip {
+      background: rgba(245, 158, 11, 0.15);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      color: #fef08a;
+      border-radius: 16px;
+      padding: 14px 18px;
+      margin: 12px 0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 13.5px;
+      flex-wrap: wrap;
+    }
+
+    /* Auto-complete popup */
+    .ac-dropdown {
+      position: absolute;
+      background: var(--deep);
+      border: 1px solid var(--mist);
+      border-radius: 12px;
+      max-height: 200px;
+      overflow-y: auto;
+      z-index: 50;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.7);
+      min-width: 160px;
+    }
+    .ac-item {
+      padding: 8px 12px;
+      cursor: pointer;
+      font-size: 13px;
+      color: var(--tx);
+      border-bottom: 1px solid rgba(109, 165, 192, 0.1);
+    }
+    .ac-item:hover {
+      background: var(--teal);
+      color: #fff;
+    }
+
+    /* Responsive Nav & Table adjustments */
+    @media (max-width: 560px) {
+      body {
+        padding-bottom: 74px; /* Space for bottom nav */
+      }
+      header.app-header {
+        padding: 12px 16px;
+      }
+      .brand-text p {
+        display: none;
+      }
+      .status-chip {
+        font-size: 11px;
+        padding: 4px 10px;
+      }
+      nav.app-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        padding: 8px 12px calc(8px + env(safe-area-inset-bottom));
+        background: rgba(5, 22, 26, 0.95);
+        backdrop-filter: blur(16px);
+        -webkit-backdrop-filter: blur(16px);
+        border-top: 1px solid rgba(109, 165, 192, 0.25);
+        z-index: 80;
+      }
+      .nav-pills {
+        width: 100%;
+        display: flex;
+        justify-content: space-around;
+      }
+      .nav-btn {
+        flex: 1;
+        justify-content: center;
+        padding: 8px 10px;
+        font-size: 13px;
+      }
+      main#app {
+        padding: 14px;
+      }
+      .card {
+        padding: 16px;
+        border-radius: 20px;
+      }
+      .stat div {
+        padding: 10px 14px;
+      }
+      .stat b {
+        font-size: 1.4rem;
+      }
+    }
+
+    /* Print Stylesheet */
+    @media print {
+      body {
+        background: #fff !important;
+        color: #000 !important;
+      }
+      header.app-header, nav.app-nav, .btn, .table-toolbar, #toast-container, .overlay-backdrop {
+        display: none !important;
+      }
+      .card {
+        background: #fff !important;
+        border: 1px solid #ccc !important;
+        box-shadow: none !important;
+        color: #000 !important;
+        padding: 0 !important;
+      }
+      table.data-table {
+        min-width: 100% !important;
+        color: #000 !important;
+      }
+      table.data-table th {
+        background: #0C7075 !important;
+        color: #fff !important;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+      }
+      table.data-table td {
+        color: #000 !important;
+        border-bottom: 1px solid #ddd !important;
+      }
+      .editable-cell:empty::before, .editable-cell.is-blank::before {
+        content: "" !important;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Top App Header -->
+  <header class="app-header">
+    <div class="brand-wrap">
+      <div class="broom-badge" title="Mobilize">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--bright)" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="19" y1="5" x2="11" y2="13" stroke="var(--bright)" stroke-width="2.5"></line>
+          <line x1="9" y1="11" x2="13" y2="15" stroke="var(--mist)" stroke-width="2"></line>
+          <path d="M11 13 L5 17 C4 18 4 20 6 20 C7 20 8 19 9 18 L13 15 Z" fill="rgba(15,150,156,0.3)" stroke="var(--bright)" stroke-width="2"></path>
+          <path d="M4 21 L8 19 M7 22 L11 18" stroke="var(--mist)" stroke-width="1.5"></path>
+        </svg>
+      </div>
+      <div class="brand-text">
+        <h1>Mobilize</h1>
+        <p>Alpha Voter card database</p>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <div class="status-chip" id="hdr-status" title="Voter Card Storage & Sync Status">
+        <span class="status-dot pulse" id="hdr-dot"></span>
+        <span id="hdr-stats-text">0 cards · 0 MB · 0 pending</span>
+      </div>
+      <button type="button" class="btn alt sm" id="btn-settings-trigger" title="Configure Google Sheets & Drive Sync">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- Three Pill Navigation Tabs -->
+  <nav class="app-nav">
+    <div class="nav-pills" role="tablist">
+      <button type="button" class="nav-btn active" id="tab-dashboard" onclick="setTab('dashboard')">
+        Dashboard
+      </button>
+      <button type="button" class="nav-btn" id="tab-locations" onclick="setTab('locations')">
+        Locations
+      </button>
+      <button type="button" class="nav-btn" id="tab-cards" onclick="setTab('cards')">
+        Cards
+      </button>
+    </div>
+  </nav>
+
+  <!-- Dynamic Application Content -->
+  <main id="app">
+    <!-- Populated by R() -->
+  </main>
+
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
+  <!-- Hidden global file inputs -->
+  <input type="file" id="file-pvc-pdf" accept="application/pdf" style="display:none">
+  <input type="file" id="file-pvc-img" accept="image/*" style="display:none">
+  <input type="file" id="file-pvc-camera" accept="image/*" capture="environment" style="display:none">
+  <input type="file" id="file-loc-upload" accept=".pdf,.xlsx,.csv,.docx,.jpg,.png,.jpeg,.doc" style="display:none">
+  <input type="file" id="file-replace-photo" accept="image/*" style="display:none">
+
+  <!-- Application Logic -->
+  <script>
+    /**
+     * MOBILIZE — Self-contained Single Page Voter-Card Collation Engine
+     * Data Layer: IndexedDB 'mobilize'
+     * State Machine: S.tab = 'dashboard'|'locations'|'cards'
+     *                S.cardView = 'hub'|'table'|'form'|'row'
+     */
+
+    // Set pdf.js worker URL
+    if (window.pdfjsLib) {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+    }
+
+    // Request persistent storage
+    if (navigator.storage && navigator.storage.persist) {
+      navigator.storage.persist().then(persistent => {
+        if (persistent) console.log("IndexedDB persistent storage granted.");
+      });
+    }
+
+    // Default sync identifiers
+    const DEFAULT_SHEET_ID = "186UvLFx_AlyOI7jQXZ0GwyAJQk8k4MFtUmTpkyNMAGg";
+    const DEFAULT_FOLDER_ID = "1LNK2R4m5Hzl55z1h-WXJJ3W2kx9AWE0w";
+
+    // Global Reactive State
+    const S = {
+      tab: 'dashboard',         // 'dashboard' | 'locations' | 'cards'
+      cardView: 'hub',          // 'hub' | 'table' | 'form' | 'row'
+      rowId: null,              // Selected row id for inspector
+      tableFilter: 'all',       // 'all' | 'flagged' | 'pending' | 'synced' | 'error'
+      tableSearch: '',
+      modal: null,              // null | 'export' | 'settings' | 'loc-paste' | 'loc-manual' | 'loc-preview'
+      lightboxUrl: null,
+      importPreview: null,      // Temporary holder for parsed locations before confirmation
+      syncRunning: false,
+      syncProgress: { current: 0, total: 0 }
+    };
+
+    // ─────────────────────────────────────────────────────────────────
+    // INDEXEDDB DATA LAYER
+    // ─────────────────────────────────────────────────────────────────
+    const DB_NAME = 'mobilize';
+    const DB_VERSION = 1;
+    let dbInstance = null;
+
+    function openDB() {
+      return new Promise((resolve, reject) => {
+        if (dbInstance) return resolve(dbInstance);
+        const req = indexedDB.open(DB_NAME, DB_VERSION);
+        req.onupgradeneeded = (e) => {
+          const db = e.target.result;
+          if (!db.objectStoreNames.contains('rows')) {
+            db.createObjectStore('rows', { keyPath: 'id', autoIncrement: true });
+          }
+          if (!db.objectStoreNames.contains('images')) {
+            db.createObjectStore('images', { keyPath: 'rowId' });
+          }
+          if (!db.objectStoreNames.contains('registry')) {
+            db.createObjectStore('registry', { keyPath: 'id', autoIncrement: true });
+          }
+          if (!db.objectStoreNames.contains('settings')) {
+            db.createObjectStore('settings', { keyPath: 'key' });
+          }
+        };
+        req.onsuccess = (e) => {
+          dbInstance = e.target.result;
+          resolve(dbInstance);
+        };
+        req.onerror = (e) => reject(e.target.error);
+      });
+    }
+
+    async function dbPut(storeName, item) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        const req = store.put(item);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function dbGet(storeName, key) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readonly');
+        const store = tx.objectStore(storeName);
+        const req = store.get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function dbAll(storeName) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readonly');
+        const store = tx.objectStore(storeName);
+        const req = store.getAll();
+        req.onsuccess = () => resolve(req.result || []);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function dbDelete(storeName, key) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        const req = store.delete(key);
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function dbClear(storeName) {
+      const db = await openDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(storeName, 'readwrite');
+        const store = tx.objectStore(storeName);
+        const req = store.clear();
+        req.onsuccess = () => resolve();
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    // Seed default settings and registry if empty
+    async function initSettingsAndRegistry() {
+      const sheetIdSetting = await dbGet('settings', 'sheetId');
+      if (!sheetIdSetting) await dbPut('settings', { key: 'sheetId', value: DEFAULT_SHEET_ID });
+
+      const folderIdSetting = await dbGet('settings', 'folderId');
+      if (!folderIdSetting) await dbPut('settings', { key: 'folderId', value: DEFAULT_FOLDER_ID });
+
+      const syncUrlSetting = await dbGet('settings', 'syncUrl');
+      if (!syncUrlSetting) await dbPut('settings', { key: 'syncUrl', value: '' });
+
+      // Seed sample Borno registry if empty
+      const existingReg = await dbAll('registry');
+      if (existingReg.length === 0) {
+        const bornoSample = [
+          { stateName: "Borno", stateCode: "08", lgaName: "MAIDUGURI", lgaCode: "15", wardName: "SHEHURI NORTH", wardCode: "01", puName: "SHEHU'S PALACE I", puCode: "001" },
+          { stateName: "Borno", stateCode: "08", lgaName: "MAIDUGURI", lgaCode: "15", wardName: "SHEHURI SOUTH", wardCode: "02", puName: "CENTRAL PRIMARY SCHOOL", puCode: "001" },
+          { stateName: "Borno", stateCode: "08", lgaName: "MAIDUGURI", lgaCode: "15", wardName: "HAUSA/MARGI", wardCode: "03", puName: "MARGI PRI SCH", puCode: "002" },
+          { stateName: "Borno", stateCode: "08", lgaName: "JERE", lgaCode: "11", wardName: "ALAU", wardCode: "01", puName: "ALAU VILLAGE SQUARE", puCode: "001" },
+          { stateName: "Borno", stateCode: "08", lgaName: "JERE", lgaCode: "11", wardName: "OLD MAIDUGURI", wardCode: "02", puName: "CUSTOM DISPENSARY", puCode: "003" },
+          { stateName: "Borno", stateCode: "08", lgaName: "BAMA", lgaCode: "04", wardName: "SHEHURI", wardCode: "01", puName: "EMIR'S OFFICE", puCode: "001" },
+          { stateName: "Borno", stateCode: "08", lgaName: "BIU", lgaCode: "07", wardName: "BIU CENTRAL", wardCode: "01", puName: "CENTRAL OFFICE", puCode: "001" },
+          { stateName: "Borno", stateCode: "08", lgaName: "GWOZA", lgaCode: "09", wardName: "GWOZA WAKANE", wardCode: "01", puName: "WAKANE SCH", puCode: "001" },
+          { stateName: "Borno", stateCode: "08", lgaName: "KONDUGA", lgaCode: "13", wardName: "KONDUGA CENTRAL", wardCode: "01", puName: "DISTRICT HEAD OFFICE", puCode: "001" },
+          { stateName: "Borno", stateCode: "08", lgaName: "MONGUNO", lgaCode: "18", wardName: "MONGUNO CENTRAL", wardCode: "01", puName: "GOVT SEC SCH", puCode: "001" },
+          { stateName: "Borno", stateCode: "08", lgaName: "HAWUL", lgaCode: "10", wardName: "MARAMA", wardCode: "01", puName: "MARAMA MARKET", puCode: "001" }
+        ];
+        for (const item of bornoSample) {
+          await dbPut('registry', item);
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // TOAST NOTIFICATIONS & STATUS BAR
+    // ─────────────────────────────────────────────────────────────────
+    function toast(message, type = 'info', duration = 3600) {
+      const container = document.getElementById('toast-container');
+      const el = document.createElement('div');
+      el.className = 'toast-msg';
+      let icon = 'ℹ️';
+      if (type === 'success') icon = '✓';
+      if (type === 'error') icon = '⚠';
+      if (type === 'warning') icon = '⚡';
+      el.innerHTML = `<span style="font-size:16px;">${icon}</span> <span>${escapeHtml(message)}</span>`;
+      container.appendChild(el);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transform = 'translateY(10px)';
+        el.style.transition = 'all 0.25s ease';
+        setTimeout(() => el.remove(), 250);
+      }, duration);
+    }
+
+    async function updateHeaderStats() {
+      const rows = await dbAll('rows');
+      const pendingCount = rows.filter(r => r.sync === 'pending' || !r.sync).length;
+      
+      // Calculate storage estimate if available
+      let storageMb = "0.8";
+      if (navigator.storage && navigator.storage.estimate) {
+        try {
+          const est = await navigator.storage.estimate();
+          if (est.usage) {
+            storageMb = (est.usage / (1024 * 1024)).toFixed(1);
+          }
+        } catch(e) {}
+      }
+      
+      const txt = `${rows.length} cards · ${storageMb} MB stored · ${pendingCount} pending sync`;
+      const hdrEl = document.getElementById('hdr-stats-text');
+      if (hdrEl) hdrEl.textContent = txt;
+
+      const dot = document.getElementById('hdr-dot');
+      if (dot) {
+        if (pendingCount > 0) {
+          dot.style.background = 'var(--bright)';
+          dot.classList.add('pulse');
+        } else {
+          dot.style.background = 'var(--green)';
+          dot.classList.remove('pulse');
+        }
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // ROUTING & STATE MACHINE DISPATCHER R()
+    // ─────────────────────────────────────────────────────────────────
+    function setTab(tabName) {
+      S.tab = tabName;
+      if (tabName === 'cards' && !S.cardView) S.cardView = 'hub';
+      updateNavHighlight();
+      R();
+    }
+
+    function setCardView(viewName, rowId = null) {
+      S.tab = 'cards';
+      S.cardView = viewName;
+      if (rowId !== null) S.rowId = rowId;
+      updateNavHighlight();
+      R();
+    }
+
+    function updateNavHighlight() {
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.remove('active'));
+      const activeBtn = document.getElementById(`tab-${S.tab}`);
+      if (activeBtn) activeBtn.classList.add('active');
+    }
+
+    async function R() {
+      await updateHeaderStats();
+      const app = document.getElementById('app');
+      app.innerHTML = '';
+
+      if (S.tab === 'dashboard') {
+        app.appendChild(await vDashboard());
+      } else if (S.tab === 'locations') {
+        app.appendChild(await vLocations());
+      } else if (S.tab === 'cards') {
+        if (S.cardView === 'hub') {
+          app.appendChild(await vCardsHub());
+        } else if (S.cardView === 'table') {
+          app.appendChild(await vCardsTable());
+        } else if (S.cardView === 'form') {
+          app.appendChild(await vCardForm());
+        } else if (S.cardView === 'row') {
+          app.appendChild(await vRowInspector());
+        }
+      }
+
+      renderModals();
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // SCREEN 1: DASHBOARD
+    // ─────────────────────────────────────────────────────────────────
+    async function vDashboard() {
+      const rows = await dbAll('rows');
+      const registry = await dbAll('registry');
+      
+      const totalCards = rows.length;
+      const needReview = rows.filter(r => (r.flags && r.flags.length > 0)).length;
+      const pendingSync = rows.filter(r => r.sync === 'pending' || !r.sync).length;
+
+      // Extract unique LGAs & Wards from rows + registry
+      const lgaSet = new Set();
+      const wardSet = new Set();
+      rows.forEach(r => {
+        if (r.lga) lgaSet.add(r.lga.toUpperCase().trim());
+        if (r.ward) wardSet.add(r.ward.toUpperCase().trim());
+      });
+      registry.forEach(reg => {
+        if (reg.lgaName) lgaSet.add(reg.lgaName.toUpperCase().trim());
+        if (reg.wardName) wardSet.add(reg.wardName.toUpperCase().trim());
+      });
+
+      // Count records per LGA
+      const lgaCounts = {};
+      rows.forEach(r => {
+        const lga = (r.lga || 'Unassigned').toUpperCase().trim();
+        lgaCounts[lga] = (lgaCounts[lga] || 0) + 1;
+      });
+      const topLGAs = Object.entries(lgaCounts)
+        .sort((a, b) => b[1] - a[1])
+        .slice(0, 8);
+      const maxCount = topLGAs.length > 0 ? topLGAs[0][1] : 1;
+
+      const wrap = document.createElement('div');
+      wrap.style.display = 'flex';
+      wrap.style.flexDirection = 'column';
+      wrap.style.gap = '20px';
+
+      wrap.innerHTML = `
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px;">
+            <div>
+              <h1 style="font-size: 2.2rem; margin-bottom: 4px;">Voter card database</h1>
+              <p style="color: var(--mu); font-size: 15px;">Collect, clean and export mobilised records.</p>
+            </div>
+            <div style="display:flex; gap:10px; flex-wrap:wrap;">
+              <button type="button" class="btn" onclick="setCardView('hub')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                + Add records
+              </button>
+              <button type="button" class="btn alt" onclick="setTab('locations')">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                Locations
+              </button>
+              <button type="button" class="btn alt sm" onclick="downloadMobilizeHtml()" title="Download standalone HTML file for cPanel">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                Save HTML
+              </button>
+            </div>
+          </div>
+
+          <!-- Stats 5 Pills -->
+          <div class="stat">
+            <div>
+              <b>${totalCards}</b>
+              <span>Mobilized</span>
+            </div>
+            <div>
+              <b>${lgaSet.size}</b>
+              <span>LGAs</span>
+            </div>
+            <div>
+              <b>${wardSet.size}</b>
+              <span>Wards</span>
+            </div>
+            <div style="${needReview > 0 ? 'border-color: rgba(245,158,11,0.5);' : ''}">
+              <b style="${needReview > 0 ? 'color: var(--amber);' : ''}">${needReview}</b>
+              <span>Need review</span>
+            </div>
+            <div>
+              <b style="${pendingSync > 0 ? 'color: var(--bright);' : ''}">${pendingSync}</b>
+              <span>Pending sync</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Records by LGA Card -->
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+            <h3 style="font-size: 18px;">Records by LGA</h3>
+            <span class="tag">${topLGAs.length} displayed</span>
+          </div>
+          
+          <div id="lga-bars-container">
+            ${topLGAs.length === 0 ? 
+              `<p style="color:var(--mu); font-style:italic; padding:12px 0;">No records yet. Click "+ Add records" or import PVC files to begin.</p>` :
+              topLGAs.map(([lgaName, count]) => {
+                const pct = Math.max(5, Math.round((count / maxCount) * 100));
+                return `
+                  <div class="bar">
+                    <span class="lga-lbl" title="${escapeHtml(lgaName)}">${escapeHtml(lgaName)}</span>
+                    <div class="bar-track">
+                      <i style="width: ${pct}%;"></i>
+                    </div>
+                    <span class="lga-cnt">${count}</span>
+                  </div>
+                `;
+              }).join('')
+            }
+          </div>
+        </div>
+      `;
+      return wrap;
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // SCREEN 2: LOCATIONS
+    // ─────────────────────────────────────────────────────────────────
+    async function vLocations() {
+      const reg = await dbAll('registry');
+      
+      // Determine state and count
+      const stateName = reg.length > 0 ? (reg[0].stateName || 'Borno') : 'Borno';
+      const stateCode = reg.length > 0 ? (reg[0].stateCode || '08') : '08';
+      
+      const lgaMap = new Map();
+      reg.forEach(item => {
+        const lgaKey = `${item.lgaName || 'UNKNOWN'}|${item.lgaCode || ''}`;
+        if (!lgaMap.has(lgaKey)) {
+          lgaMap.set(lgaKey, { name: item.lgaName || 'UNKNOWN', code: item.lgaCode || '', wards: new Map() });
+        }
+        const lgaObj = lgaMap.get(lgaKey);
+        const wardKey = `${item.wardName || 'UNKNOWN'}|${item.wardCode || ''}`;
+        if (!lgaObj.wards.has(wardKey)) {
+          lgaObj.wards.set(wardKey, { id: item.id, name: item.wardName, code: item.wardCode, pus: [] });
+        }
+        if (item.puName) {
+          lgaObj.wards.get(wardKey).pus.push({ name: item.puName, code: item.puCode });
+        }
+      });
+
+      let totalWards = 0;
+      lgaMap.forEach(l => totalWards += l.wards.size);
+
+      const wrap = document.createElement('div');
+      wrap.style.display = 'flex';
+      wrap.style.flexDirection = 'column';
+      wrap.style.gap = '20px';
+
+      const registryHeader = reg.length > 0 ? 
+        `${stateName} (${stateCode}) · ${lgaMap.size} LGAs · ${totalWards} wards` : 
+        'Empty (upload or paste locations below)';
+
+      wrap.innerHTML = `
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px;">
+            <div>
+              <h2 style="font-size: 24px; margin-bottom: 4px;">Registry</h2>
+              <p style="color: var(--mist); font-size: 15px; font-weight: 500;">${escapeHtml(registryHeader)}</p>
+            </div>
+            <div style="display:flex; gap:8px; flex-wrap:wrap;">
+              <button type="button" class="btn sm" onclick="triggerLocationUpload()">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                Upload file
+              </button>
+              <button type="button" class="btn alt sm" onclick="openModal('loc-paste')">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path><rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect></svg>
+                Paste text
+              </button>
+              <button type="button" class="btn alt sm" onclick="openModal('loc-manual')">
+                + Add manually
+              </button>
+            </div>
+          </div>
+
+          <p style="font-size: 12px; color: var(--mu); margin-top: 10px;">
+            Accepted: PDF · XLSX · CSV · DOCX · JPG · PNG (Old .doc → save as .docx or PDF first)
+          </p>
+        </div>
+
+        <!-- Collapsible Tree View -->
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 14px;">
+            <h3 style="font-size: 18px;">Locations Tree</h3>
+            <span style="font-size: 12px; color: var(--mu);">Tip: Ward names & codes are directly editable on click</span>
+          </div>
+
+          <div id="loc-tree-container">
+            ${lgaMap.size === 0 ? 
+              `<p style="color:var(--mu); font-style:italic; padding:16px;">Registry is empty. Upload a Borno State LGA breakdown or paste text to populate.</p>` :
+              Array.from(lgaMap.values()).map((lga, idx) => `
+                <details class="lga-node" ${idx === 0 ? 'open' : ''}>
+                  <summary class="lga-summary">
+                    <span style="display:flex; align-items:center; gap:8px;">
+                      <span class="tag">${escapeHtml(lga.code || '—')}</span>
+                      <span>${escapeHtml(lga.name)}</span>
+                    </span>
+                    <span style="font-size:12px; color:var(--mist);">${lga.wards.size} Wards</span>
+                  </summary>
+                  <div class="ward-tree-body">
+                    ${Array.from(lga.wards.values()).map(w => `
+                      <div class="ward-row">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                          <span style="font-family:monospace; color:var(--mu); font-size:12px;">Ward:</span>
+                          <span contenteditable="true" class="editable-cell" 
+                                onblur="saveWardEdit(${w.id}, 'wardName', this.innerText)"
+                                title="Click to edit ward name">${escapeHtml(w.name || '')}</span>
+                          <span class="tag amber" contenteditable="true" 
+                                onblur="saveWardEdit(${w.id}, 'wardCode', this.innerText)"
+                                title="Click to edit ward code">${escapeHtml(w.code || '—')}</span>
+                        </div>
+                        <div style="font-size:12px; color:var(--mist);">
+                          ${w.pus.length > 0 ? `${w.pus.length} Polling Units` : '1 Collation PU'}
+                        </div>
+                      </div>
+                    `).join('')}
+                  </div>
+                </details>
+              `).join('')
+            }
+          </div>
+        </div>
+      `;
+      return wrap;
+    }
+
+    async function saveWardEdit(id, field, value) {
+      if (!id) return;
+      const item = await dbGet('registry', id);
+      if (item) {
+        item[field] = value.trim();
+        await dbPut('registry', item);
+        toast(`Updated ward ${field} to ${value.trim()}`, 'success', 2000);
+      }
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // SCREEN 3: CARDS HUB (S.cardView = 'hub')
+    // ─────────────────────────────────────────────────────────────────
+    async function vCardsHub() {
+      const rows = await dbAll('rows');
+      const needReview = rows.filter(r => r.flags && r.flags.length > 0).length;
+
+      const wrap = document.createElement('div');
+      wrap.style.display = 'flex';
+      wrap.style.flexDirection = 'column';
+      wrap.style.gap = '20px';
+
+      wrap.innerHTML = `
+        <div class="card">
+          <h2 style="font-size: 26px; margin-bottom: 6px;">Add records</h2>
+          <p style="color: var(--mu);">Choose your ingestion method. PDF batches, photos, and manual entries are suggested and never dropped.</p>
+
+          <div class="hub-grid">
+            <div class="choice-card" onclick="document.getElementById('file-pvc-pdf').click()">
+              <div class="choice-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+              </div>
+              <h3 style="font-size:18px;">Upload PVC PDF</h3>
+              <p style="font-size:13px; color:var(--mu);">Process single or multi-page voter card batches. Extracts text layer and falls back to OCR.</p>
+            </div>
+
+            <div class="choice-card" onclick="document.getElementById('file-pvc-img').click()">
+              <div class="choice-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+              </div>
+              <h3 style="font-size:18px;">Attach / Snap</h3>
+              <p style="font-size:13px; color:var(--mu);">Take a photo or upload card image (JPG/PNG). Fast client-side OCR extraction.</p>
+            </div>
+
+            <div class="choice-card" onclick="setCardView('form')">
+              <div class="choice-icon">
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
+              </div>
+              <h3 style="font-size:18px;">Add manually</h3>
+              <p style="font-size:13px; color:var(--mu);">Type voter information directly with auto-filtered State/LGA/Ward/PU selectors.</p>
+            </div>
+          </div>
+
+          <div style="border-top: 1px solid rgba(109,165,192,0.2); padding-top: 20px; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px;">
+            <div>
+              <span style="font-size: 16px; font-weight:600; color:#fff;">Current table — </span>
+              <span style="color:var(--tx); font-weight:500;">${rows.length} rows · <b style="${needReview > 0 ? 'color:var(--amber);' : ''}">${needReview} need review</b></span>
+            </div>
+            <button type="button" class="btn" onclick="setCardView('table')">
+              Open table →
+            </button>
+          </div>
+        </div>
+      `;
+      return wrap;
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // SCREEN 4: CARDS TABLE (13 COLUMNS FULLY EDITABLE)
+    // ─────────────────────────────────────────────────────────────────
+    async function vCardsTable() {
+      let rows = await dbAll('rows');
+      const isMobile = window.innerWidth <= 560;
+
+      // Filter rows
+      if (S.tableFilter === 'flagged') {
+        rows = rows.filter(r => r.flags && r.flags.length > 0);
+      } else if (S.tableFilter === 'pending') {
+        rows = rows.filter(r => r.sync === 'pending' || !r.sync);
+      } else if (S.tableFilter === 'synced') {
+        rows = rows.filter(r => r.sync === 'synced');
+      } else if (S.tableFilter === 'error') {
+        rows = rows.filter(r => r.sync === 'error');
+      }
+
+      // Search filter
+      if (S.tableSearch.trim()) {
+        const q = S.tableSearch.toLowerCase().trim();
+        rows = rows.filter(r => 
+          (r.name && r.name.toLowerCase().includes(q)) ||
+          (r.contact && r.contact.includes(q)) ||
+          (r.lga && r.lga.toLowerCase().includes(q)) ||
+          (r.ward && r.ward.toLowerCase().includes(q)) ||
+          (r.pu && r.pu.toLowerCase().includes(q)) ||
+          (r.portfolio && r.portfolio.toLowerCase().includes(q))
+        );
+      }
+
+      const wrap = document.createElement('div');
+      wrap.style.display = 'flex';
+      wrap.style.flexDirection = 'column';
+      wrap.style.gap = '14px';
+
+      // Load thumbnails from images store
+      const allImages = await dbAll('images');
+      const imageMap = new Map();
+      allImages.forEach(img => {
+        if (img.blob) {
+          imageMap.set(img.rowId, URL.createObjectURL(img.blob));
+        }
+      });
+
+      wrap.innerHTML = `
+        <!-- Table Toolbar -->
+        <div class="card" style="padding: 16px 20px;">
+          <div class="table-toolbar">
+            <div class="toolbar-left">
+              <button type="button" class="btn sm" onclick="setCardView('form')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                + Add
+              </button>
+              <button type="button" class="btn alt sm" onclick="setCardView('hub')">
+                Upload
+              </button>
+              <button type="button" class="btn alt sm" onclick="setTab('locations')">
+                Locations
+              </button>
+
+              <div style="display:flex; align-items:center; gap:6px;">
+                <select id="tbl-filter-sel" style="width: auto; padding: 6px 30px 6px 12px; font-size: 13px;" onchange="setTableFilter(this.value)">
+                  <option value="all" ${S.tableFilter === 'all' ? 'selected' : ''}>Filter: All</option>
+                  <option value="flagged" ${S.tableFilter === 'flagged' ? 'selected' : ''}>Needs review</option>
+                  <option value="pending" ${S.tableFilter === 'pending' ? 'selected' : ''}>Pending sync</option>
+                  <option value="synced" ${S.tableFilter === 'synced' ? 'selected' : ''}>Synced</option>
+                  <option value="error" ${S.tableFilter === 'error' ? 'selected' : ''}>Sync Error</option>
+                </select>
+              </div>
+
+              <input type="text" placeholder="Search name, phone, LGA…" value="${escapeHtml(S.tableSearch)}" 
+                     style="width: 180px; padding: 6px 12px; font-size: 13px;" 
+                     oninput="setTableSearch(this.value)">
+            </div>
+
+            <div class="toolbar-right">
+              <button type="button" class="btn sm" id="btn-sync-pending" onclick="startSyncPending()" ${S.syncRunning ? 'disabled' : ''}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                ${S.syncRunning ? 'Syncing…' : '⟳ Sync pending'}
+              </button>
+              <button type="button" class="btn alt sm" onclick="openModal('export')">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                ⤓ Export
+              </button>
+            </div>
+          </div>
+
+          <div style="font-size: 12px; color: var(--mu);">
+            Showing ${rows.length} records. Click any row to inspect & sync individually. Dashed cells are fillable.
+          </div>
+        </div>
+
+        <!-- 13-Column Table OR Mobile Stacked Cards -->
+        ${isMobile ? `
+          <div class="mobile-cards-wrap">
+            ${rows.length === 0 ? `<div class="card" style="text-align:center; color:var(--mu);">No records found matching filter.</div>` :
+              rows.map((row, idx) => {
+                const isFlagged = row.flags && row.flags.length > 0;
+                const thumbSrc = imageMap.get(row.id);
+                return `
+                  <div class="mobile-row-card ${isFlagged ? 'flagged' : ''}" onclick="openRowInspector(${row.id})">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                      <span style="font-weight:700; color:var(--mist); font-size:12px;">S/N #${row.sn || (idx + 1)} ${isFlagged ? '⚠' : ''}</span>
+                      <span class="tag ${row.sync === 'synced' ? 'green' : (row.sync === 'error' ? 'red' : 'amber')}">${row.sync || 'pending'}</span>
+                    </div>
+                    <div style="font-size:16px; font-weight:700; color:#fff;">${escapeHtml(row.name || 'Untitled')}</div>
+                    <div style="font-size:13px; color:var(--mu);">${escapeHtml(row.lga || 'No LGA')} · ${escapeHtml(row.ward || 'No Ward')}</div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-top:4px;">
+                      <span style="font-family:monospace; color:var(--bright); font-size:13px;">${escapeHtml(row.contact || 'No phone')}</span>
+                      ${thumbSrc ? `<img src="${thumbSrc}" style="width:36px; height:36px; object-fit:cover; border-radius:6px;">` : ''}
+                    </div>
+                  </div>
+                `;
+              }).join('')
+            }
+          </div>
+        ` : `
+          <div class="table-container">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th style="width: 50px;">S/N</th>
+                  <th>NAME</th>
+                  <th>PORTFOLIO</th>
+                  <th>LGA</th>
+                  <th>LGA CODE</th>
+                  <th>WARD</th>
+                  <th>WARD CODE</th>
+                  <th>PU</th>
+                  <th>PU CODE</th>
+                  <th>CONTACT NO</th>
+                  <th>2ND CONTACT</th>
+                  <th>PVC PHOTO</th>
+                  <th>SYNC STATUS</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${rows.length === 0 ? `
+                  <tr>
+                    <td colspan="13" style="text-align:center; padding:32px; color:var(--mu);">
+                      No voter records found. Use "+ Add" or "Upload" to get started.
+                    </td>
+                  </tr>
+                ` : rows.map((row, idx) => {
+                  const isFlagged = row.flags && row.flags.length > 0;
+                  const thumbSrc = imageMap.get(row.id);
+                  const snDisplay = `${row.sn || (idx + 1)}${isFlagged ? ' ⚠' : ''}`;
+                  
+                  return `
+                    <tr class="${isFlagged ? 'flagged' : ''}" data-row-id="${row.id}">
+                      <td style="font-family:monospace; font-weight:600; color:var(--mist); text-align:center;" onclick="openRowInspector(${row.id})">
+                        ${snDisplay}
+                      </td>
+
+                      <td onclick="event.stopPropagation()">
+                        <span contenteditable="true" class="editable-cell ${!row.name ? 'is-blank' : ''}"
+                              onblur="saveCellEdit(${row.id}, 'name', this.innerText)"
+                              onkeydown="handleCellNav(event)">${escapeHtml(row.name || '')}</span>
+                      </td>
+
+                      <td onclick="event.stopPropagation()">
+                        <span contenteditable="true" class="editable-cell ${!row.portfolio ? 'is-blank' : ''}"
+                              placeholder="—"
+                              onblur="saveCellEdit(${row.id}, 'portfolio', this.innerText)"
+                              onkeydown="handleCellNav(event)">${escapeHtml(row.portfolio || '')}</span>
+                      </td>
+
+                      <td onclick="event.stopPropagation()">
+                        <span contenteditable="true" class="editable-cell ${!row.lga ? 'is-blank' : ''}"
+                              onblur="saveCellEdit(${row.id}, 'lga', this.innerText)"
+                              onfocus="showRegistryAutocomplete(this, ${row.id}, 'lga')"
+                              onkeydown="handleCellNav(event)">${escapeHtml(row.lga || '')}</span>
+                      </td>
+
+                      <td onclick="event.stopPropagation()">
+                        <span contenteditable="true" class="editable-cell ${!row.lgaCode ? 'is-blank' : ''}"
+                              onblur="saveCellEdit(${row.id}, 'lgaCode', this.innerText)"
+                              onkeydown="handleCellNav(event)">${escapeHtml(row.lgaCode || '')}</span>
+                      </td>
+
+                      <td onclick="event.stopPropagation()">
+                        <span contenteditable="true" class="editable-cell ${!row.ward ? 'is-blank' : ''}"
+                              onblur="saveCellEdit(${row.id}, 'ward', this.innerText)"
+                              onfocus="showRegistryAutocomplete(this, ${row.id}, 'ward')"
+                              onkeydown="handleCellNav(event)">${escapeHtml(row.ward || '')}</span>
+                      </td>
+
+                      <td onclick="event.stopPropagation()">
+                        <span contenteditable="true" class="editable-cell ${!row.wardCode ? 'is-blank' : ''}"
+                              onblur="saveCellEdit(${row.id}, 'wardCode', this.innerText)"
+                              onkeydown="handleCellNav(event)">${escapeHtml(row.wardCode || '')}</span>
+                      </td>
+
+                      <td onclick="event.stopPropagation()">
+                        <span contenteditable="true" class="editable-cell ${!row.pu ? 'is-blank' : ''}"
+                              onblur="saveCellEdit(${row.id}, 'pu', this.innerText)"
+                              onfocus="showRegistryAutocomplete(this, ${row.id}, 'pu')"
+                              onkeydown="handleCellNav(event)">${escapeHtml(row.pu || '')}</span>
+                      </td>
+
+                      <td onclick="event.stopPropagation()">
+                        <span contenteditable="true" class="editable-cell ${!row.puCode ? 'is-blank' : ''}"
+                              onblur="saveCellEdit(${row.id}, 'puCode', this.innerText)"
+                              onkeydown="handleCellNav(event)">${escapeHtml(row.puCode || '')}</span>
+                      </td>
+
+                      <td onclick="event.stopPropagation()">
+                        <span contenteditable="true" class="editable-cell ${!row.contact ? 'is-blank' : ''}"
+                              style="font-family:monospace;"
+                              onblur="saveCellEdit(${row.id}, 'contact', this.innerText)"
+                              onkeydown="handleCellNav(event)">${escapeHtml(row.contact || '')}</span>
+                      </td>
+
+                      <td onclick="event.stopPropagation()">
+                        <span contenteditable="true" class="editable-cell ${!row.contact2 ? 'is-blank' : ''}"
+                              style="font-family:monospace;"
+                              placeholder="—"
+                              onblur="saveCellEdit(${row.id}, 'contact2', this.innerText)"
+                              onkeydown="handleCellNav(event)">${escapeHtml(row.contact2 || '')}</span>
+                      </td>
+
+                      <td onclick="event.stopPropagation()" style="text-align:center;">
+                        <div class="thumb-cell" onclick="openPhotoLightbox('${thumbSrc || ''}')" title="Click to view full photo">
+                          ${thumbSrc ? `<img src="${thumbSrc}" alt="PVC">` : `<span style="font-size:11px; color:var(--mu);">No pic</span>`}
+                        </div>
+                      </td>
+
+                      <td onclick="openRowInspector(${row.id})">
+                        <span class="tag ${row.sync === 'synced' ? 'green' : (row.sync === 'error' ? 'red' : 'amber')}">
+                          ${row.sync === 'synced' ? 'Synced' : (row.sync === 'error' ? 'Error' : 'Pending')}
+                        </span>
+                      </td>
+                    </tr>
+                  `;
+                }).join('')}
+              </tbody>
+            </table>
+          </div>
+        `}
+      `;
+      return wrap;
+    }
+
+    function setTableFilter(val) {
+      S.tableFilter = val;
+      R();
+    }
+
+    let searchDebounce = null;
+    function setTableSearch(val) {
+      S.tableSearch = val;
+      clearTimeout(searchDebounce);
+      searchDebounce = setTimeout(() => R(), 250);
+    }
+
+    // Debounced cell edit handler
+    let editDebounceMap = new Map();
+    async function saveCellEdit(id, field, value) {
+      const cleanVal = value.trim();
+      const row = await dbGet('rows', id);
+      if (!row) return;
+
+      row[field] = cleanVal;
+      
+      // Auto-validate flags on edit
+      const flags = [];
+      if (!row.name) flags.push("Missing name");
+      if (!row.contact || row.contact.length !== 11 || !row.contact.startsWith('0')) {
+        flags.push("Contact should be 11 digits starting with 0");
+      }
+      if (!row.lga) flags.push("Missing LGA");
+      if (!row.ward) flags.push("Missing Ward");
+      row.flags = flags;
+
+      await dbPut('rows', row);
+      updateHeaderStats();
+    }
+
+    function handleCellNav(e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.target.blur();
+      }
+    }
+
+    function openRowInspector(id) {
+      setCardView('row', id);
+    }
+
+    // Registry autocomplete dropdown
+    let activeAcDropdown = null;
+    async function showRegistryAutocomplete(cell, rowId, type) {
+      if (activeAcDropdown) activeAcDropdown.remove();
+      const reg = await dbAll('registry');
+      if (reg.length === 0) return;
+
+      const items = new Set();
+      if (type === 'lga') {
+        reg.forEach(r => { if (r.lgaName) items.add(`${r.lgaName} (${r.lgaCode || ''})`); });
+      } else if (type === 'ward') {
+        reg.forEach(r => { if (r.wardName) items.add(`${r.wardName} (${r.wardCode || ''})`); });
+      } else if (type === 'pu') {
+        reg.forEach(r => { if (r.puName) items.add(`${r.puName} (${r.puCode || ''})`); });
+      }
+
+      if (items.size === 0) return;
+
+      const dd = document.createElement('div');
+      dd.className = 'ac-dropdown';
+      const rect = cell.getBoundingClientRect();
+      dd.style.left = `${rect.left}px`;
+      dd.style.top = `${rect.bottom + window.scrollY + 4}px`;
+
+      Array.from(items).slice(0, 15).forEach(str => {
+        const itemEl = document.createElement('div');
+        itemEl.className = 'ac-item';
+        itemEl.innerText = str;
+        itemEl.onmousedown = (e) => {
+          e.preventDefault();
+          const match = str.match(/^(.+?)\s*\((.*?)\)$/);
+          if (match) {
+            cell.innerText = match[1].trim();
+            saveCellEdit(rowId, type, match[1].trim());
+            // If code exists, also update corresponding code field
+            if (match[2]) {
+              saveCellEdit(rowId, `${type}Code`, match[2].trim());
+            }
+          } else {
+            cell.innerText = str;
+            saveCellEdit(rowId, type, str);
+          }
+          dd.remove();
+        };
+        dd.appendChild(itemEl);
+      });
+
+      document.body.appendChild(dd);
+      activeAcDropdown = dd;
+
+      const closeHandler = () => {
+        if (activeAcDropdown) activeAcDropdown.remove();
+        document.removeEventListener('click', closeHandler);
+      };
+      setTimeout(() => document.addEventListener('click', closeHandler), 100);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // SCREEN 5: MANUAL FORM (S.cardView = 'form')
+    // ─────────────────────────────────────────────────────────────────
+    let formImageBlob = null;
+    let formImagePreviewUrl = null;
+
+    async function vCardForm() {
+      const reg = await dbAll('registry');
+      
+      // Extract unique states and LGAs
+      const states = Array.from(new Set(reg.map(r => r.stateName).filter(Boolean)));
+      if (states.length === 0) states.push("Borno");
+      
+      const wrap = document.createElement('div');
+      wrap.style.display = 'flex';
+      wrap.style.flexDirection = 'column';
+      wrap.style.gap = '20px';
+
+      wrap.innerHTML = `
+        <div class="card" style="max-width: 760px; margin: 0 auto; width: 100%;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 20px;">
+            <a href="javascript:void(0)" onclick="setCardView('table')" style="color:var(--mist); text-decoration:none; font-weight:600; display:flex; align-items:center; gap:6px;">
+              ← Cards table
+            </a>
+            <h2 style="font-size: 22px;">Add Voter Record</h2>
+          </div>
+
+          <!-- PVC Photo Panel -->
+          <div style="margin-bottom: 24px;">
+            <label style="display:block; font-size:13px; font-weight:600; color:var(--mu); margin-bottom:8px;">PVC Photo</label>
+            <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap;">
+              <button type="button" class="btn sm" onclick="document.getElementById('file-pvc-camera').click()">
+                📷 Take a photo
+              </button>
+              <button type="button" class="btn alt sm" onclick="document.getElementById('file-pvc-img').click()">
+                Attach image
+              </button>
+              ${formImagePreviewUrl ? `
+                <div style="position:relative; display:inline-block;">
+                  <img src="${formImagePreviewUrl}" style="width:54px; height:54px; object-fit:cover; border-radius:10px; border:1.5px solid var(--bright);">
+                  <button type="button" onclick="clearFormImage()" style="position:absolute; top:-6px; right:-6px; width:20px; height:20px; border-radius:50%; background:var(--red); color:#fff; border:0; cursor:pointer; font-size:12px; font-weight:bold;">×</button>
+                </div>
+              ` : `<span style="font-size:12px; color:var(--mu);">No image attached yet</span>`}
+            </div>
+          </div>
+
+          <form id="manual-voter-form" onsubmit="handleManualFormSubmit(event)" style="display:flex; flex-direction:column; gap:16px;">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
+              <div>
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Full Name *</label>
+                <input type="text" id="mf-name" required placeholder="e.g. MOHAMMED ABUBAKAR">
+              </div>
+              <div>
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Portfolio / MDA</label>
+                <input type="text" id="mf-portfolio" placeholder="e.g. Youth Leader">
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
+              <div>
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Contact No. (11 digits) *</label>
+                <input type="tel" id="mf-contact" required placeholder="e.g. 08012345678" pattern="0[0-9]{10}">
+              </div>
+              <div>
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">2nd Contact</label>
+                <input type="tel" id="mf-contact2" placeholder="Optional backup number">
+              </div>
+            </div>
+
+            <!-- Location Hierarchy Dropdowns -->
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
+              <div>
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">State *</label>
+                <select id="mf-state" required onchange="updateFormLgaOptions(this.value)">
+                  ${states.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+                </select>
+              </div>
+              <div>
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">LGA *</label>
+                <select id="mf-lga" required onchange="updateFormWardOptions(this.value)">
+                  <option value="">Select LGA</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
+              <div>
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Ward *</label>
+                <select id="mf-ward" required onchange="updateFormPuOptions(this.value)">
+                  <option value="">Select Ward</option>
+                </select>
+              </div>
+              <div>
+                <label style="display:block; font-size:13px; font-weight:600; margin-bottom:6px;">Polling Unit *</label>
+                <select id="mf-pu" required>
+                  <option value="">Select PU</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="margin-top: 14px; display:flex; justify-content:flex-end; gap:12px;">
+              <button type="button" class="btn alt" onclick="setCardView('table')">Cancel</button>
+              <button type="submit" class="btn">Submit to table</button>
+            </div>
+          </form>
+        </div>
+      `;
+
+      // Trigger initial cascading dropdown fill
+      setTimeout(() => {
+        const stateEl = wrap.querySelector('#mf-state');
+        if (stateEl) updateFormLgaOptions(stateEl.value);
+      }, 50);
+
+      return wrap;
+    }
+
+    function clearFormImage() {
+      formImageBlob = null;
+      formImagePreviewUrl = null;
+      R();
+    }
+
+    async function updateFormLgaOptions(stateName) {
+      const reg = await dbAll('registry');
+      const lgas = Array.from(new Set(reg.filter(r => !stateName || r.stateName === stateName).map(r => r.lgaName).filter(Boolean)));
+      const lgaEl = document.getElementById('mf-lga');
+      if (!lgaEl) return;
+      lgaEl.innerHTML = '<option value="">Select LGA</option>' + lgas.map(l => `<option value="${escapeHtml(l)}">${escapeHtml(l)}</option>`).join('');
+      updateFormWardOptions('');
+    }
+
+    async function updateFormWardOptions(lgaName) {
+      const reg = await dbAll('registry');
+      const wards = Array.from(new Set(reg.filter(r => !lgaName || r.lgaName === lgaName).map(r => r.wardName).filter(Boolean)));
+      const wardEl = document.getElementById('mf-ward');
+      if (!wardEl) return;
+      wardEl.innerHTML = '<option value="">Select Ward</option>' + wards.map(w => `<option value="${escapeHtml(w)}">${escapeHtml(w)}</option>`).join('');
+      updateFormPuOptions('');
+    }
+
+    async function updateFormPuOptions(wardName) {
+      const reg = await dbAll('registry');
+      const pus = reg.filter(r => !wardName || r.wardName === wardName).map(r => r.puName).filter(Boolean);
+      const puEl = document.getElementById('mf-pu');
+      if (!puEl) return;
+      if (pus.length === 0) pus.push("Collation Centre PU");
+      puEl.innerHTML = '<option value="">Select PU</option>' + pus.map(p => `<option value="${escapeHtml(p)}">${escapeHtml(p)}</option>`).join('');
+    }
+
+    async function handleManualFormSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('mf-name').value.trim();
+      const portfolio = document.getElementById('mf-portfolio').value.trim();
+      const contact = document.getElementById('mf-contact').value.trim();
+      const contact2 = document.getElementById('mf-contact2').value.trim();
+      const state = document.getElementById('mf-state').value;
+      const lga = document.getElementById('mf-lga').value;
+      const ward = document.getElementById('mf-ward').value;
+      const pu = document.getElementById('mf-pu').value;
+
+      // Lookup codes from registry
+      const reg = await dbAll('registry');
+      const regItem = reg.find(r => r.lgaName === lga && r.wardName === ward) || {};
+      const lgaCode = regItem.lgaCode || '';
+      const wardCode = regItem.wardCode || '';
+      const puCode = regItem.puCode || wardCode;
+
+      const existingRows = await dbAll('rows');
+      const nextSn = existingRows.length + 1;
+
+      const rowObj = {
+        sn: nextSn,
+        name: name.toUpperCase(),
+        portfolio: portfolio || '',
+        lga: lga,
+        lgaCode: lgaCode,
+        ward: ward,
+        wardCode: wardCode,
+        pu: pu,
+        puCode: puCode,
+        contact: contact,
+        contact2: contact2 || '',
+        flags: [],
+        sync: 'pending',
+        createdAt: new Date().toISOString()
+      };
+
+      const newId = await dbPut('rows', rowObj);
+
+      // Save image if present
+      if (formImageBlob) {
+        await dbPut('images', { rowId: newId, blob: formImageBlob });
+      }
+
+      formImageBlob = null;
+      formImagePreviewUrl = null;
+      toast(`Added row #${nextSn} to table!`, 'success');
+      setCardView('table');
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // SCREEN 6: ROW INSPECTOR (S.cardView = 'row')
+    // ─────────────────────────────────────────────────────────────────
+    async function vRowInspector() {
+      const row = await dbGet('rows', S.rowId);
+      if (!row) {
+        setCardView('table');
+        return document.createElement('div');
+      }
+
+      const allRows = await dbAll('rows');
+      const currentIndex = allRows.findIndex(r => r.id === row.id);
+      const prevRow = currentIndex > 0 ? allRows[currentIndex - 1] : null;
+      const nextRow = currentIndex < allRows.length - 1 ? allRows[currentIndex + 1] : null;
+
+      // Get image
+      const imgRec = await dbGet('images', row.id);
+      const imgSrc = imgRec && imgRec.blob ? URL.createObjectURL(imgRec.blob) : null;
+
+      // Soft warnings
+      const warnings = [];
+      if (!row.contact || row.contact.length !== 11) {
+        warnings.push("Phone number should normally be 11 digits (e.g. 08012345678)");
+      }
+      if (!row.lgaCode) warnings.push("LGA Code is not yet assigned");
+      if (!row.wardCode) warnings.push("Ward Code is missing");
+
+      const wrap = document.createElement('div');
+      wrap.style.display = 'flex';
+      wrap.style.flexDirection = 'column';
+      wrap.style.gap = '20px';
+
+      wrap.innerHTML = `
+        <div class="card">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom: 20px;">
+            <div style="display:flex; align-items:center; gap:12px;">
+              <a href="javascript:void(0)" onclick="setCardView('table')" style="color:var(--mist); text-decoration:none; font-weight:600;">
+                ← Table
+              </a>
+              <h2 style="font-size: 22px;">Row ${row.sn || row.id} · ${escapeHtml(row.name || 'Untitled')}</h2>
+            </div>
+            <div style="display:flex; gap:8px;">
+              <button type="button" class="btn sm" onclick="syncSingleRow(${row.id})" ${S.syncRunning ? 'disabled' : ''}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><polyline points="1 20 1 14 7 14"></polyline><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"></path></svg>
+                Sync this row
+              </button>
+              <button type="button" class="btn red sm" onclick="deleteSingleRow(${row.id})">
+                Delete
+              </button>
+            </div>
+          </div>
+
+          <!-- Inspector Layout: 2 Cols Desktop, 1 Col Phone -->
+          <div class="inspector-layout">
+            <!-- Left: PVC Image -->
+            <div>
+              <div class="pvc-preview-box" onclick="openPhotoLightbox('${imgSrc || ''}')">
+                ${imgSrc ? `
+                  <img src="${imgSrc}" alt="Voter Card Photo">
+                  <span style="font-size:12px; color:var(--mist); margin-top:8px;">Click to view full image</span>
+                ` : `
+                  <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="var(--mu)" stroke-width="1.5"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                  <span style="font-size:13px; color:var(--mu); margin-top:8px;">No card photo stored</span>
+                `}
+              </div>
+
+              <div style="margin-top: 10px; display:flex; justify-content:center;">
+                <button type="button" class="btn alt sm" onclick="triggerReplacePhoto(${row.id})" title="Select a new image to replace this photo">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                  Replace Photo
+                </button>
+              </div>
+
+              ${warnings.length > 0 ? `
+                <div class="warning-strip" style="margin-top:14px;">
+                  <div>
+                    <b style="display:block; margin-bottom:4px;">Validation suggestions:</b>
+                    <ul style="padding-left:18px; font-size:12.5px;">
+                      ${warnings.map(w => `<li>${escapeHtml(w)}</li>`).join('')}
+                    </ul>
+                  </div>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- Right: Editable Fields -->
+            <form id="inspector-form" onsubmit="saveInspectorRow(event, ${row.id})" style="display:flex; flex-direction:column; gap:14px;">
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">NAME</label>
+                  <input type="text" id="insp-name" value="${escapeHtml(row.name || '')}">
+                </div>
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">PORTFOLIO</label>
+                  <input type="text" id="insp-portfolio" value="${escapeHtml(row.portfolio || '')}" placeholder="—">
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">CONTACT NO</label>
+                  <input type="tel" id="insp-contact" value="${escapeHtml(row.contact || '')}">
+                </div>
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">2ND CONTACT</label>
+                  <input type="tel" id="insp-contact2" value="${escapeHtml(row.contact2 || '')}" placeholder="—">
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 2fr 1fr; gap:12px;">
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">LGA</label>
+                  <input type="text" id="insp-lga" value="${escapeHtml(row.lga || '')}">
+                </div>
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">LGA CODE</label>
+                  <input type="text" id="insp-lgaCode" value="${escapeHtml(row.lgaCode || '')}">
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 2fr 1fr; gap:12px;">
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">WARD</label>
+                  <input type="text" id="insp-ward" value="${escapeHtml(row.ward || '')}">
+                </div>
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">WARD CODE</label>
+                  <input type="text" id="insp-wardCode" value="${escapeHtml(row.wardCode || '')}">
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 2fr 1fr; gap:12px;">
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">POLLING UNIT</label>
+                  <input type="text" id="insp-pu" value="${escapeHtml(row.pu || '')}">
+                </div>
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">PU CODE</label>
+                  <input type="text" id="insp-puCode" value="${escapeHtml(row.puCode || '')}">
+                </div>
+              </div>
+
+              <!-- Sync metadata -->
+              <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(7,46,51,0.5); padding:10px 14px; border-radius:14px; font-size:12.5px;">
+                <span style="color:var(--mu);">Status: <b style="color:#fff;">${row.sync || 'Pending'}</b></span>
+                <span style="color:var(--mist);">${row.syncedAt ? `Synced at ${new Date(row.syncedAt).toLocaleTimeString()}` : 'Not synced yet'}</span>
+              </div>
+
+              <!-- Buttons: Save, Prev, Next -->
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-top:10px; flex-wrap:wrap; gap:10px;">
+                <button type="submit" class="btn">
+                  Save
+                </button>
+                <div style="display:flex; gap:8px;">
+                  <button type="button" class="btn alt sm" ${!prevRow ? 'disabled' : ''} onclick="openRowInspector(${prevRow ? prevRow.id : 0})">
+                    ← Prev
+                  </button>
+                  <button type="button" class="btn alt sm" ${!nextRow ? 'disabled' : ''} onclick="openRowInspector(${nextRow ? nextRow.id : 0})">
+                    Next →
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      return wrap;
+    }
+
+    async function saveInspectorRow(e, id) {
+      e.preventDefault();
+      const row = await dbGet('rows', id);
+      if (!row) return;
+
+      row.name = document.getElementById('insp-name').value.trim();
+      row.portfolio = document.getElementById('insp-portfolio').value.trim();
+      row.contact = document.getElementById('insp-contact').value.trim();
+      row.contact2 = document.getElementById('insp-contact2').value.trim();
+      row.lga = document.getElementById('insp-lga').value.trim();
+      row.lgaCode = document.getElementById('insp-lgaCode').value.trim();
+      row.ward = document.getElementById('insp-ward').value.trim();
+      row.wardCode = document.getElementById('insp-wardCode').value.trim();
+      row.pu = document.getElementById('insp-pu').value.trim();
+      row.puCode = document.getElementById('insp-puCode').value.trim();
+
+      const flags = [];
+      if (!row.name) flags.push("Missing name");
+      if (!row.contact || row.contact.length !== 11) flags.push("Contact not 11 digits");
+      row.flags = flags;
+
+      await dbPut('rows', row);
+      toast("Row saved successfully!", "success");
+      R();
+    }
+
+    async function deleteSingleRow(id) {
+      if (!confirm("Are you sure you want to delete this row?")) return;
+      await dbDelete('rows', id);
+      await dbDelete('images', id);
+      toast("Row deleted", "info");
+      setCardView('table');
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // GOOGLE SHEETS + DRIVE SYNC ENGINE (CRITICAL)
+    // ─────────────────────────────────────────────────────────────────
+    async function getSyncSettings() {
+      const syncUrl = (await dbGet('settings', 'syncUrl'))?.value || '';
+      const sheetId = (await dbGet('settings', 'sheetId'))?.value || DEFAULT_SHEET_ID;
+      const folderId = (await dbGet('settings', 'folderId'))?.value || DEFAULT_FOLDER_ID;
+      return { syncUrl, sheetId, folderId };
+    }
+
+    // Canvas Downscaler: max 800px wide, JPEG 0.6
+    async function prepareImageBase64(blob) {
+      if (!blob) return '';
+      return new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxW = 800;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxW) {
+            h = Math.round((h * maxW) / w);
+            w = maxW;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          const dataUrl = canvas.toDataURL('image/jpeg', 0.6);
+          resolve(dataUrl);
+        };
+        img.onerror = () => resolve('');
+        img.src = URL.createObjectURL(blob);
+      });
+    }
+
+    async function sendRowSyncRequest(row, imageBase64, settings) {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 20000); // 20s timeout
+
+      const fd = new FormData();
+      fd.append('action', 'addRow');
+      fd.append('sheetId', settings.sheetId);
+      fd.append('folderId', settings.folderId);
+      fd.append('sn', row.sn || '');
+      fd.append('name', row.name || '');
+      fd.append('portfolio', row.portfolio || '');
+      fd.append('lga', row.lga || '');
+      fd.append('lgaCode', row.lgaCode || '');
+      fd.append('ward', row.ward || '');
+      fd.append('wardCode', row.wardCode || '');
+      fd.append('pu', row.pu || '');
+      fd.append('puCode', row.puCode || '');
+      fd.append('contact', row.contact || '');
+      fd.append('contact2', row.contact2 || '');
+      fd.append('imageData', imageBase64 || '');
+      fd.append('fileName', imageBase64 ? `row_${row.id}_${row.sn || '0'}.jpg` : '');
+
+      try {
+        const resp = await fetch(settings.syncUrl, {
+          method: 'POST',
+          body: fd,
+          signal: controller.signal
+        });
+        clearTimeout(timeoutId);
+        if (!resp.ok) {
+          throw new Error(`HTTP ${resp.status}`);
+        }
+        const data = await resp.json();
+        return data;
+      } catch (err) {
+        clearTimeout(timeoutId);
+        throw err;
+      }
+    }
+
+    async function syncSingleRow(id) {
+      const settings = await getSyncSettings();
+      if (!settings.syncUrl) {
+        toast("Please configure your Google Apps Script Sync URL in Settings first.", "warning");
+        openModal('settings');
+        return;
+      }
+
+      const row = await dbGet('rows', id);
+      if (!row) return;
+
+      toast("Syncing row...", "info", 1500);
+      const imgRec = await dbGet('images', id);
+      const base64 = imgRec ? await prepareImageBase64(imgRec.blob) : '';
+
+      try {
+        const res = await sendRowSyncRequest(row, base64, settings);
+        if (res && res.result === 'success') {
+          row.sync = 'synced';
+          row.syncedAt = new Date().toISOString();
+          if (res.imageUrl) row.imageUrl = res.imageUrl;
+          await dbPut('rows', row);
+          toast("Row synced successfully to Google Sheets & Drive!", "success");
+        } else {
+          row.sync = 'error';
+          await dbPut('rows', row);
+          toast(`Sync error: ${res?.message || 'Server error'}`, "error");
+        }
+      } catch (err) {
+        row.sync = 'error';
+        await dbPut('rows', row);
+        toast(`Sync failed: ${err.message}`, "error");
+      }
+      R();
+    }
+
+    async function startSyncPending() {
+      if (S.syncRunning) return;
+      const settings = await getSyncSettings();
+      if (!settings.syncUrl) {
+        toast("Please configure your Google Apps Script Sync URL in Settings first.", "warning");
+        openModal('settings');
+        return;
+      }
+
+      const allRows = await dbAll('rows');
+      const pendingRows = allRows.filter(r => r.sync === 'pending' || r.sync === 'error' || !r.sync);
+
+      if (pendingRows.length === 0) {
+        toast("No pending rows to sync.", "info");
+        return;
+      }
+
+      // Warning if > 200 rows
+      if (pendingRows.length > 200) {
+        const mins = Math.ceil(pendingRows.length / 50);
+        alert(`You have ${pendingRows.length} unsynced rows. Syncing will take about ${mins} minutes. Keep this tab open and connected.`);
+      }
+
+      S.syncRunning = true;
+      S.syncProgress = { current: 0, total: pendingRows.length };
+      R();
+
+      const backoffDelays = [5000, 15000, 45000];
+
+      for (let i = 0; i < pendingRows.length; i++) {
+        const row = pendingRows[i];
+        S.syncProgress.current = i + 1;
+        toast(`Syncing ${i + 1} of ${pendingRows.length}…`, "info", 2000);
+
+        const imgRec = await dbGet('images', row.id);
+        const base64 = imgRec ? await prepareImageBase64(imgRec.blob) : '';
+
+        let attempt = 0;
+        let success = false;
+
+        while (attempt <= 3 && !success) {
+          try {
+            const res = await sendRowSyncRequest(row, base64, settings);
+            if (res && res.result === 'success') {
+              row.sync = 'synced';
+              row.syncedAt = new Date().toISOString();
+              if (res.imageUrl) row.imageUrl = res.imageUrl;
+              await dbPut('rows', row);
+              success = true;
+            } else {
+              throw new Error(res?.message || "Sync returned error");
+            }
+          } catch (err) {
+            attempt++;
+            if (attempt <= 3) {
+              const waitMs = backoffDelays[attempt - 1];
+              toast(`Row #${row.sn || row.id} rate limited/error. Backing off ${waitMs / 1000}s...`, "warning", waitMs);
+              await new Promise(r => setTimeout(r, waitMs));
+            } else {
+              row.sync = 'error';
+              await dbPut('rows', row);
+            }
+          }
+        }
+
+        // Fixed 1200ms delay between each row request to protect concurrency quota
+        await new Promise(resolve => setTimeout(resolve, 1200));
+      }
+
+      S.syncRunning = false;
+      toast(`All synced ✓ (${pendingRows.length} rows processed)`, "success", 4000);
+      R();
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // PARSERS: PVC CARDS (PDF / IMAGE)
+    // ─────────────────────────────────────────────────────────────────
+    // Setup file listeners
+    document.getElementById('file-pvc-pdf').addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      await processPvcPdfFile(file);
+      e.target.value = '';
+    });
+
+    document.getElementById('file-pvc-img').addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      await processPvcImageFile(file);
+      e.target.value = '';
+    });
+
+    document.getElementById('file-pvc-camera').addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      await processPvcImageFile(file);
+      e.target.value = '';
+    });
+
+    // ─────────────────────────────────────────────────────────────────
+    // CARD RECTANGLE DETECTION & CROPPING (UP TO 8 CARDS PER PAGE)
+    // ─────────────────────────────────────────────────────────────────
+    function detectCardRectangles(canvas, expectedCount = 0) {
+      const W = canvas.width;
+      const H = canvas.height;
+
+      // Fast downsampled canvas for robust contour & connected-components analysis
+      const sW = 240;
+      const sH = Math.round((H / W) * sW);
+      const tCanvas = document.createElement('canvas');
+      tCanvas.width = sW;
+      tCanvas.height = sH;
+      const tCtx = tCanvas.getContext('2d');
+      tCtx.drawImage(canvas, 0, 0, sW, sH);
+
+      const imgData = tCtx.getImageData(0, 0, sW, sH);
+      const d = imgData.data;
+
+      // Sample edge/border luminance to detect scanner/page background
+      let borderLum = 0, borderCount = 0;
+      for (let x = 0; x < sW; x += 2) {
+        for (let y of [0, 1, 2, sH - 3, sH - 2, sH - 1]) {
+          const idx = (y * sW + x) * 4;
+          borderLum += 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
+          borderCount++;
+        }
+      }
+      for (let y = 0; y < sH; y += 2) {
+        for (let x of [0, 1, 2, sW - 3, sW - 2, sW - 1]) {
+          const idx = (y * sW + x) * 4;
+          borderLum += 0.299 * d[idx] + 0.587 * d[idx + 1] + 0.114 * d[idx + 2];
+          borderCount++;
+        }
+      }
+      const bgL = borderLum / Math.max(1, borderCount);
+
+      // Light regions against background: PVC cards are light (typically L > 175)
+      const isLight = new Uint8Array(sW * sH);
+      const thresh = (bgL < 200) ? Math.max(160, bgL + 25) : 215;
+
+      for (let i = 0; i < sW * sH; i++) {
+        const lum = 0.299 * d[i * 4] + 0.587 * d[i * 4 + 1] + 0.114 * d[i * 4 + 2];
+        if (lum >= thresh) isLight[i] = 1;
+      }
+
+      // Connected component labeling (BFS)
+      const visited = new Uint8Array(sW * sH);
+      const boxes = [];
+      const totalPixels = sW * sH;
+
+      for (let y = 0; y < sH; y++) {
+        for (let x = 0; x < sW; x++) {
+          const idx = y * sW + x;
+          if (isLight[idx] && !visited[idx]) {
+            let minX = x, maxX = x, minY = y, maxY = y;
+            const q = [idx];
+            visited[idx] = 1;
+            let qIdx = 0;
+
+            while (qIdx < q.length) {
+              const curr = q[qIdx++];
+              const cx = curr % sW;
+              const cy = Math.floor(curr / sW);
+              if (cx < minX) minX = cx;
+              if (cx > maxX) maxX = cx;
+              if (cy < minY) minY = cy;
+              if (cy > maxY) maxY = cy;
+
+              if (cy > 0 && isLight[curr - sW] && !visited[curr - sW]) {
+                visited[curr - sW] = 1; q.push(curr - sW);
+              }
+              if (cy < sH - 1 && isLight[curr + sW] && !visited[curr + sW]) {
+                visited[curr + sW] = 1; q.push(curr + sW);
+              }
+              if (cx > 0 && isLight[curr - 1] && !visited[curr - 1]) {
+                visited[curr - 1] = 1; q.push(curr - 1);
+              }
+              if (cx < sW - 1 && isLight[curr + 1] && !visited[curr + 1]) {
+                visited[curr + 1] = 1; q.push(curr + 1);
+              }
+            }
+
+            const bw = maxX - minX + 1;
+            const bh = maxY - minY + 1;
+            const area = bw * bh;
+            const aspect = bw / bh;
+
+            // Area between 2% and 48% of page (or up to 88% if single card)
+            if (area >= totalPixels * 0.02 && area <= totalPixels * 0.88) {
+              if ((aspect >= 1.05 && aspect <= 2.2) || (aspect >= 0.5 && aspect <= 0.95)) {
+                const scX = W / sW;
+                const scY = H / sH;
+                boxes.push({
+                  x: Math.max(0, Math.round(minX * scX)),
+                  y: Math.max(0, Math.round(minY * scY)),
+                  w: Math.min(W, Math.round(bw * scX)),
+                  h: Math.min(H, Math.round(bh * scY)),
+                  area: area
+                });
+              }
+            }
+          }
+        }
+      }
+
+      // Deduplicate overlapping boxes
+      const cleanBoxes = [];
+      for (let i = 0; i < boxes.length; i++) {
+        let keep = true;
+        for (let j = 0; j < boxes.length; j++) {
+          if (i !== j) {
+            const A = boxes[i];
+            const B = boxes[j];
+            const oX = Math.max(0, Math.min(A.x + A.w, B.x + B.w) - Math.max(A.x, B.x));
+            const oY = Math.max(0, Math.min(A.y + A.h, B.y + B.h) - Math.max(A.y, B.y));
+            const oArea = oX * oY;
+            if (oArea > (A.w * A.h) * 0.6 && (B.w * B.h) > (A.w * A.h)) {
+              keep = false;
+              break;
+            }
+          }
+        }
+        if (keep) cleanBoxes.push(boxes[i]);
+      }
+
+      // Sort in reading order (top-to-bottom, left-to-right)
+      cleanBoxes.sort((a, b) => {
+        const yDiff = a.y - b.y;
+        if (Math.abs(yDiff) > H * 0.08) return yDiff;
+        return a.x - b.x;
+      });
+
+      // If at least 1 card detected, limit to max 8 cards and return
+      if (cleanBoxes.length > 0) {
+        return cleanBoxes.slice(0, 8);
+      }
+
+      // Fallback: Partition page into standard multi-card grid if cards are on plain white background
+      const count = Math.min(8, Math.max(1, expectedCount || 1));
+      const fallbackBoxes = [];
+      if (count <= 1) {
+        fallbackBoxes.push({
+          x: Math.round(W * 0.04),
+          y: Math.round(H * 0.04),
+          w: Math.round(W * 0.92),
+          h: Math.round(H * 0.92)
+        });
+      } else {
+        const cols = count > 1 ? 2 : 1;
+        const rows = Math.ceil(count / cols);
+        const cellW = W / cols;
+        const cellH = H / rows;
+        for (let i = 0; i < count; i++) {
+          const c = i % cols;
+          const r = Math.floor(i / cols);
+          fallbackBoxes.push({
+            x: Math.round(c * cellW + cellW * 0.02),
+            y: Math.round(r * cellH + cellH * 0.02),
+            w: Math.round(cellW * 0.96),
+            h: Math.round(cellH * 0.96)
+          });
+        }
+      }
+      return fallbackBoxes;
+    }
+
+    function cropCardCanvas(sourceCanvas, box) {
+      const cropped = document.createElement('canvas');
+      const maxW = 800;
+      let cw = box.w;
+      let ch = box.h;
+      if (cw > maxW) {
+        ch = Math.round((ch * maxW) / cw);
+        cw = maxW;
+      }
+      cropped.width = Math.max(10, cw);
+      cropped.height = Math.max(10, ch);
+      const ctx = cropped.getContext('2d');
+      ctx.drawImage(sourceCanvas, box.x, box.y, box.w, box.h, 0, 0, cropped.width, cropped.height);
+      return cropped;
+    }
+
+    async function processPvcPdfFile(file) {
+      if (!window.pdfjsLib) {
+        toast("PDF.js library is not loaded. Please check your internet connection.", "error");
+        return;
+      }
+      toast("Reading PDF pages...", "info", 3000);
+
+      try {
+        const arrayBuffer = await file.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        const registry = await dbAll('registry');
+        const numPages = pdf.numPages;
+        let totalImportedCards = 0;
+
+        toast(`Parsing ${numPages} page(s) with multi-card detection...`, "info", 4000);
+
+        for (let i = 1; i <= numPages; i++) {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 1.5 });
+
+          // Render page to canvas
+          const pageCanvas = document.createElement('canvas');
+          pageCanvas.width = viewport.width;
+          pageCanvas.height = viewport.height;
+          const pCtx = pageCanvas.getContext('2d');
+          await page.render({ canvasContext: pCtx, viewport: viewport }).promise;
+
+          // Extract text items with coordinates
+          const textContent = await page.getTextContent();
+          const itemsWithPos = (textContent.items || []).map(it => {
+            const pt = viewport.convertToViewportPoint(it.transform[4], it.transform[5]);
+            return { str: it.str, x: pt[0], y: pt[1] };
+          });
+
+          const fullPageText = itemsWithPos.map(it => it.str).join(' ');
+
+          // Count text card indicators
+          const codeMatches = Array.from(fullPageText.matchAll(/CODE[:\s]+(\d{2})-(\d{2})-(\d{2})-(\d{1,3})/gi));
+          const captionMatches = Array.from(fullPageText.matchAll(/(?:^|\n|\s*)(\d+)\.\s*(.+?)\s*[—\-]\s*([^\n\r]+)/g));
+          const phoneMatches = Array.from(fullPageText.matchAll(/(0\d{10})/g));
+          const expectedCards = Math.max(codeMatches.length, captionMatches.length, 1);
+
+          // Detect individual card rectangles (light regions against background, up to 8 cards per page)
+          const cardBoxes = detectCardRectangles(pageCanvas, expectedCards);
+
+          toast(`Page ${i}: Found ${cardBoxes.length} card(s). Cropping and extracting...`, "info", 2000);
+
+          for (let cIdx = 0; cIdx < cardBoxes.length; cIdx++) {
+            const box = cardBoxes[cIdx];
+            // Crop ONLY this card rectangle
+            const cardCanvas = cropCardCanvas(pageCanvas, box);
+
+            // Find text items located inside this card rectangle
+            const boxItems = itemsWithPos.filter(it => 
+              it.x >= box.x - 25 && it.x <= box.x + box.w + 25 &&
+              it.y >= box.y - 25 && it.y <= box.y + box.h + 25
+            );
+            const boxText = boxItems.map(it => it.str).join(' ');
+
+            let captionMatch = boxText.match(/(?:^|\n|\s*)(\d+)\.\s*(.+?)\s*[—\-]\s*([^\n\r]+)/);
+            let codeMatch = boxText.match(/CODE[:\s]+(\d{2})-(\d{2})-(\d{2})-(\d{1,3})/i);
+            let phoneMatch = boxText.match(/(0\d{10})/);
+
+            // If box text was empty or missing key fields, fallback to indexed matches from page
+            if (!codeMatch && codeMatches[cIdx]) codeMatch = codeMatches[cIdx];
+            if (!captionMatch && captionMatches[cIdx]) captionMatch = captionMatches[cIdx];
+            if (!phoneMatch && phoneMatches[cIdx]) phoneMatch = phoneMatches[cIdx];
+
+            // If still missing and Tesseract available, run OCR on ONLY this cropped card canvas
+            if ((!codeMatch || !captionMatch) && window.Tesseract) {
+              try {
+                const ocrRes = await Tesseract.recognize(cardCanvas, 'eng');
+                const ocrText = ocrRes?.data?.text || '';
+                if (!captionMatch) captionMatch = ocrText.match(/(?:^|\n|\s*)(\d+)\.\s*(.+?)\s*[—\-]\s*([^\n\r]+)/);
+                if (!codeMatch) codeMatch = ocrText.match(/CODE[:\s]+(\d{2})-(\d{2})-(\d{2})-(\d{1,3})/i);
+                if (!phoneMatch) phoneMatch = ocrText.match(/(0\d{10})/);
+              } catch (e) {
+                console.warn("Card OCR error:", e);
+              }
+            }
+
+            const existingRows = await dbAll('rows');
+            let sn = captionMatch ? parseInt(captionMatch[1]) : (existingRows.length + 1);
+            let name = captionMatch ? captionMatch[2].trim().toUpperCase() : '';
+            let lgaHint = captionMatch ? captionMatch[3].trim().toUpperCase() : '';
+
+            let stateCode = codeMatch ? codeMatch[1] : '';
+            let lgaCode = codeMatch ? codeMatch[2] : '';
+            let wardCode = codeMatch ? codeMatch[3] : '';
+            let puCode = codeMatch ? codeMatch[4].padStart(3, '0') : '';
+            let contact = phoneMatch ? phoneMatch[1] : '';
+
+            // Requirement 2: Location Resolution
+            // If code cannot be found in registry store, do NOT fail the row.
+            // Leave LGA/Ward/PU names blank, add flag "code not in registry", and keep row editable.
+            let lgaName = "";
+            let wardName = "";
+            let puName = "";
+            let matched = false;
+
+            if (lgaCode) {
+              const matchReg = registry.find(r => 
+                String(r.lgaCode).padStart(2, '0') === String(lgaCode).padStart(2, '0') &&
+                (wardCode ? String(r.wardCode).padStart(2, '0') === String(wardCode).padStart(2, '0') : true) &&
+                (puCode && r.puCode ? String(r.puCode).padStart(3, '0') === String(puCode).padStart(3, '0') : true)
+              ) || registry.find(r => 
+                String(r.lgaCode).padStart(2, '0') === String(lgaCode).padStart(2, '0') &&
+                (wardCode ? String(r.wardCode).padStart(2, '0') === String(wardCode).padStart(2, '0') : true)
+              ) || registry.find(r => 
+                String(r.lgaCode).padStart(2, '0') === String(lgaCode).padStart(2, '0')
+              );
+
+              if (matchReg) {
+                lgaName = matchReg.lgaName || lgaHint || '';
+                wardName = (wardCode && matchReg.wardCode === wardCode) ? (matchReg.wardName || '') : '';
+                puName = (puCode && matchReg.puCode === puCode) ? (matchReg.puName || '') : '';
+                matched = true;
+              }
+            }
+
+            const flags = [];
+            if (!matched) {
+              lgaName = "";
+              wardName = "";
+              puName = "";
+              flags.push("code not in registry");
+            }
+
+            if (!name) {
+              name = `CARD P${i} #${cIdx + 1}`;
+              flags.push("Name could not be parsed");
+            }
+            if (!contact) {
+              flags.push("Phone number missing");
+            }
+
+            // Create row
+            const newRow = {
+              sn: sn,
+              name: name,
+              portfolio: '',
+              lga: lgaName,
+              lgaCode: lgaCode,
+              ward: wardName,
+              wardCode: wardCode,
+              pu: puName,
+              puCode: puCode,
+              contact: contact,
+              contact2: '',
+              flags: flags,
+              sync: 'pending',
+              createdAt: new Date().toISOString()
+            };
+
+            const rowId = await dbPut('rows', newRow);
+
+            // Save ONLY the cropped card as that row's image in IndexedDB
+            await new Promise((resolve) => {
+              cardCanvas.toBlob(async (blob) => {
+                if (blob) {
+                  await dbPut('images', { rowId, blob });
+                }
+                resolve();
+              }, 'image/jpeg', 0.6);
+            });
+
+            totalImportedCards++;
+          }
+        }
+
+        toast(`Successfully imported ${totalImportedCards} cropped voter cards!`, "success", 4000);
+        setCardView('table');
+      } catch (err) {
+        toast(`Error reading PDF: ${err.message}`, "error");
+      }
+    }
+
+    async function processPvcImageFile(file) {
+      toast("Processing card photo with OCR...", "info", 4000);
+
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const img = new Image();
+        img.onload = async () => {
+          const maxW = 800;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxW) {
+            h = Math.round((h * maxW) / w);
+            w = maxW;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+
+          let ocrText = '';
+          if (window.Tesseract) {
+            try {
+              const res = await Tesseract.recognize(canvas, 'eng');
+              ocrText = res.data.text;
+            } catch(e) {
+              console.warn("Tesseract OCR error:", e);
+            }
+          }
+
+          const captionMatch = ocrText.match(/(\d+)\.\s*(.+?)\s*[—\-]\s*([^\n\r]+)/);
+          const codeMatch = ocrText.match(/CODE[:\s]+(\d{2})-(\d{2})-(\d{2})-(\d{1,3})/i);
+          const phoneMatch = ocrText.match(/(0\d{10})/);
+
+          const existingRows = await dbAll('rows');
+          const registry = await dbAll('registry');
+
+          let sn = captionMatch ? parseInt(captionMatch[1]) : existingRows.length + 1;
+          let name = captionMatch ? captionMatch[2].trim().toUpperCase() : 'PHOTO VOTER';
+          let lgaHint = captionMatch ? captionMatch[3].trim().toUpperCase() : '';
+
+          let stateCode = codeMatch ? codeMatch[1] : '';
+          let lgaCode = codeMatch ? codeMatch[2] : '';
+          let wardCode = codeMatch ? codeMatch[3] : '';
+          let puCode = codeMatch ? codeMatch[4].padStart(3, '0') : '';
+          let contact = phoneMatch ? phoneMatch[1] : '';
+
+          // Requirement 2: Location Resolution
+          let lgaName = "";
+          let wardName = "";
+          let puName = "";
+          let matched = false;
+
+          if (lgaCode) {
+            const matchReg = registry.find(r => 
+              String(r.lgaCode).padStart(2, '0') === String(lgaCode).padStart(2, '0') &&
+              (wardCode ? String(r.wardCode).padStart(2, '0') === String(wardCode).padStart(2, '0') : true)
+            );
+            if (matchReg) {
+              lgaName = matchReg.lgaName || lgaHint || '';
+              wardName = matchReg.wardName || '';
+              puName = matchReg.puName || '';
+              matched = true;
+            }
+          }
+
+          const flags = [];
+          if (!matched) {
+            lgaName = "";
+            wardName = "";
+            puName = "";
+            flags.push("code not in registry");
+          }
+
+          const newRow = {
+            sn: sn,
+            name: name,
+            portfolio: '',
+            lga: lgaName,
+            lgaCode: lgaCode,
+            ward: wardName,
+            wardCode: wardCode,
+            pu: puName,
+            puCode: puCode,
+            contact: contact,
+            contact2: '',
+            flags: flags,
+            sync: 'pending',
+            createdAt: new Date().toISOString()
+          };
+
+          const rowId = await dbPut('rows', newRow);
+
+          // Save blob to images store
+          canvas.toBlob(async (blob) => {
+            if (blob) await dbPut('images', { rowId, blob });
+            toast("Voter photo added to table!", "success");
+            setCardView('table');
+          }, 'image/jpeg', 0.6);
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // REPLACE PHOTO LOGIC (ROW INSPECTOR)
+    // ─────────────────────────────────────────────────────────────────
+    let replaceTargetRowId = null;
+
+    function triggerReplacePhoto(rowId) {
+      replaceTargetRowId = rowId;
+      const fileInput = document.getElementById('file-replace-photo');
+      if (fileInput) {
+        fileInput.value = '';
+        fileInput.click();
+      }
+    }
+
+    document.getElementById('file-replace-photo').addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file || !replaceTargetRowId) return;
+
+      toast("Processing new photo...", "info", 2000);
+
+      const reader = new FileReader();
+      reader.onload = async (ev) => {
+        const img = new Image();
+        img.onload = async () => {
+          const maxW = 800;
+          let w = img.width;
+          let h = img.height;
+          if (w > maxW) {
+            h = Math.round((h * maxW) / w);
+            w = maxW;
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+
+          canvas.toBlob(async (blob) => {
+            if (blob) {
+              // Overwrite existing Blob in the "images" store for that rowId
+              await dbPut('images', { rowId: replaceTargetRowId, blob: blob });
+
+              // Mark row pending if it was synced so the new photo is uploaded on next sync
+              const row = await dbGet('rows', replaceTargetRowId);
+              if (row && row.sync === 'synced') {
+                row.sync = 'pending';
+                await dbPut('rows', row);
+              }
+
+              toast("Photo replaced successfully!", "success");
+              // Refresh the thumbnail and inspector
+              R();
+            }
+          }, 'image/jpeg', 0.6);
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
+    // ─────────────────────────────────────────────────────────────────
+    // PARSERS: LOCATIONS (PDF, XLSX, CSV, DOCX, JPG/PNG)
+    // ─────────────────────────────────────────────────────────────────
+    function triggerLocationUpload() {
+      document.getElementById('file-loc-upload').click();
+    }
+
+    document.getElementById('file-loc-upload').addEventListener('change', async function(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      await processLocationFile(file);
+      e.target.value = '';
+    });
+
+    async function processLocationFile(file) {
+      const name = file.name.toLowerCase();
+
+      // Old .doc rejection
+      if (name.endsWith('.doc') && !name.endsWith('.docx')) {
+        alert("Please save as .docx or PDF and re-upload.");
+        return;
+      }
+
+      toast(`Parsing ${file.name}...`, "info", 3000);
+
+      try {
+        let extractedItems = [];
+        let unreadablePages = [];
+
+        if (name.endsWith('.pdf')) {
+          const res = await parseLocationPdf(file);
+          extractedItems = res.items;
+          unreadablePages = res.unreadablePages;
+        } else if (name.endsWith('.xlsx') || name.endsWith('.xls')) {
+          extractedItems = await parseLocationExcel(file);
+        } else if (name.endsWith('.csv')) {
+          extractedItems = await parseLocationCsv(file);
+        } else if (name.endsWith('.docx')) {
+          extractedItems = await parseLocationDocx(file);
+        } else if (name.endsWith('.jpg') || name.endsWith('.png') || name.endsWith('.jpeg')) {
+          extractedItems = await parseLocationImage(file);
+        }
+
+        if (extractedItems.length === 0) {
+          toast("No valid location rows could be extracted from this file.", "error");
+          return;
+        }
+
+        // Open Import Preview modal
+        S.importPreview = {
+          fileName: file.name,
+          items: extractedItems,
+          unreadablePages: unreadablePages,
+          fileRef: file
+        };
+        openModal('loc-preview');
+      } catch (err) {
+        toast(`Error reading file: ${err.message}`, "error");
+      }
+    }
+
+    // Location PDF Parser (Borno-style document rules)
+    async function parseLocationPdf(file) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let fullText = "";
+      const unreadablePages = [];
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const str = textContent.items.map(item => item.str).join(' ');
+        if (!str || str.trim().length < 20) {
+          unreadablePages.push(i);
+        } else {
+          fullText += "\n" + str;
+        }
+      }
+
+      const items = parseLocationText(fullText);
+      return { items, unreadablePages };
+    }
+
+    function parseLocationText(rawText) {
+      const items = [];
+      let defaultState = "Borno";
+      let defaultStateCode = "08";
+
+      const stateMatch = rawText.match(/State[:\s]+([A-Za-z]+)\s*(?:\((\d{1,2})\))?/i);
+      if (stateMatch) {
+        defaultState = stateMatch[1];
+        if (stateMatch[2]) defaultStateCode = stateMatch[2];
+      }
+
+      // Split on /LGA[:\s]+([A-Z' ]+?)\s*CODE[:\s]+(\d{1,2})/
+      const lgaRegex = /LGA[:\s]+([A-Z' ]+?)\s*CODE[:\s]+(\d{1,2})/gi;
+      let match;
+      const lgaBlocks = [];
+      let lastIndex = 0;
+      let lastLga = null;
+
+      while ((match = lgaRegex.exec(rawText)) !== null) {
+        if (lastLga) {
+          lgaBlocks.push({
+            lgaName: lastLga.name.trim().toUpperCase(),
+            lgaCode: lastLga.code.trim(),
+            content: rawText.substring(lastIndex, match.index)
+          });
+        }
+        lastLga = { name: match[1], code: match[2] };
+        lastIndex = lgaRegex.lastIndex;
+      }
+      if (lastLga) {
+        lgaBlocks.push({
+          lgaName: lastLga.name.trim().toUpperCase(),
+          lgaCode: lastLga.code.trim(),
+          content: rawText.substring(lastIndex)
+        });
+      }
+
+      // Inside each block match ward lines:
+      // /^\s*(\d{1,3})\s*([A-Za-z0-9'’\-\/&.\s]+?)\s*(\d{2})\s+(.+)$/m
+      const wardRegex = /^\s*(\d{1,3})\s*([A-Za-z0-9'’\-\/&.\s]+?)\s*(\d{2})\s+(.+)$/gm;
+
+      for (const block of lgaBlocks) {
+        let wMatch;
+        while ((wMatch = wardRegex.exec(block.content)) !== null) {
+          const wardNum = wMatch[1];
+          const wardName = wMatch[2].trim().toUpperCase();
+          const wardCode = wMatch[3].trim();
+          const collationCentre = wMatch[4].trim().toUpperCase();
+
+          items.push({
+            stateName: defaultState,
+            stateCode: defaultStateCode,
+            lgaName: block.lgaName,
+            lgaCode: block.lgaCode,
+            wardName: wardName,
+            wardCode: wardCode,
+            puName: collationCentre,
+            puCode: wardCode
+          });
+        }
+      }
+
+      return items;
+    }
+
+    // Excel Parser (SheetJS)
+    async function parseLocationExcel(file) {
+      const buffer = await file.arrayBuffer();
+      const wb = XLSX.read(buffer, { type: 'array' });
+      const sheetName = wb.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+
+      return rows.map(r => {
+        const getCol = (key) => {
+          const found = Object.keys(r).find(k => k.toLowerCase().replace(/[^a-z]/g, '') === key);
+          return found ? String(r[found]).trim() : '';
+        };
+
+        return {
+          stateName: getCol('state') || 'Borno',
+          stateCode: getCol('statecode') || '08',
+          lgaName: getCol('lga') || getCol('lganame'),
+          lgaCode: getCol('lgacode') || getCol('code'),
+          wardName: getCol('ward') || getCol('wardname'),
+          wardCode: getCol('wardcode'),
+          puName: getCol('pu') || getCol('puname') || getCol('pollingunit'),
+          puCode: getCol('pucode')
+        };
+      }).filter(item => item.lgaName && item.wardName);
+    }
+
+    // CSV Parser
+    async function parseLocationCsv(file) {
+      const text = await file.text();
+      const wb = XLSX.read(text, { type: 'string' });
+      const sheetName = wb.SheetNames[0];
+      const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: '' });
+      return rows.map(r => ({
+        stateName: r.State || r.state || 'Borno',
+        stateCode: r['State Code'] || r.stateCode || '08',
+        lgaName: r.LGA || r.lga || '',
+        lgaCode: String(r['LGA Code'] || r.lgaCode || ''),
+        wardName: r.Ward || r.ward || '',
+        wardCode: String(r['Ward Code'] || r.wardCode || ''),
+        puName: r.PU || r.pu || r['Polling Unit'] || '',
+        puCode: String(r['PU Code'] || r.puCode || '')
+      })).filter(i => i.lgaName && i.wardName);
+    }
+
+    // DOCX Parser (JSZip -> word/document.xml)
+    async function parseLocationDocx(file) {
+      const zip = await JSZip.loadAsync(file);
+      const docXml = await zip.file("word/document.xml").async("text");
+      // Extract text content from xml
+      const textOnly = docXml.replace(/<w:p[^>]*>/g, '\n').replace(/<[^>]+>/g, ' ');
+      return parseLocationText(textOnly);
+    }
+
+    // Image Parser (Tesseract OCR)
+    async function parseLocationImage(file) {
+      if (!window.Tesseract) throw new Error("Tesseract.js not loaded.");
+      toast("Running OCR on image document...", "info", 6000);
+      const res = await Tesseract.recognize(file, 'eng');
+      return parseLocationText(res.data.text);
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // OVERLAYS & MODALS
+    // ─────────────────────────────────────────────────────────────────
+    function openModal(modalName) {
+      S.modal = modalName;
+      renderModals();
+    }
+
+    function closeModal() {
+      S.modal = null;
+      renderModals();
+    }
+
+    function openPhotoLightbox(url) {
+      if (!url) return;
+      S.lightboxUrl = url;
+      renderModals();
+    }
+
+    function closeLightbox() {
+      S.lightboxUrl = null;
+      renderModals();
+    }
+
+    // Esc key listener for overlays
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (S.lightboxUrl) closeLightbox();
+        else if (S.modal) closeModal();
+      }
+    });
+
+    document.getElementById('btn-settings-trigger').addEventListener('click', () => {
+      openModal('settings');
+    });
+
+    function renderModals() {
+      let overlayContainer = document.getElementById('global-overlay-wrap');
+      if (!overlayContainer) {
+        overlayContainer = document.createElement('div');
+        overlayContainer.id = 'global-overlay-wrap';
+        document.body.appendChild(overlayContainer);
+      }
+      overlayContainer.innerHTML = '';
+
+      // Lightbox Overlay
+      if (S.lightboxUrl) {
+        const lb = document.createElement('div');
+        lb.className = 'overlay-backdrop';
+        lb.onclick = (e) => { if (e.target === lb) closeLightbox(); };
+        lb.innerHTML = `
+          <div class="lightbox-img-wrap">
+            <button type="button" class="close-overlay-btn" onclick="closeLightbox()">×</button>
+            <img src="${S.lightboxUrl}" alt="Card Lightbox">
+          </div>
+        `;
+        overlayContainer.appendChild(lb);
+        return;
+      }
+
+      // Settings Modal
+      if (S.modal === 'settings') {
+        const modal = document.createElement('div');
+        modal.className = 'overlay-backdrop';
+        modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+        getSyncSettings().then(st => {
+          modal.innerHTML = `
+            <div class="card modal-box">
+              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                <h3 style="font-size:20px;">Settings — Google Sheets & Drive Sync</h3>
+                <button type="button" class="btn alt sm" onclick="closeModal()">×</button>
+              </div>
+
+              <form onsubmit="saveSettingsForm(event)" style="display:flex; flex-direction:column; gap:14px;">
+                <div>
+                  <label style="display:block; font-size:12px; font-weight:600; color:var(--mist); margin-bottom:4px;">
+                    Google Apps Script Sync URL *
+                  </label>
+                  <input type="url" id="st-syncUrl" value="${escapeHtml(st.syncUrl)}" placeholder="https://script.google.com/macros/s/.../exec" required>
+                  <span style="font-size:11px; color:var(--mu);">Web App deployment URL with access set to "Anyone".</span>
+                </div>
+
+                <div>
+                  <label style="display:block; font-size:12px; font-weight:600; color:var(--mist); margin-bottom:4px;">
+                    Google Sheet ID
+                  </label>
+                  <input type="text" id="st-sheetId" value="${escapeHtml(st.sheetId)}" required>
+                </div>
+
+                <div>
+                  <label style="display:block; font-size:12px; font-weight:600; color:var(--mist); margin-bottom:4px;">
+                    Google Drive Folder ID
+                  </label>
+                  <input type="text" id="st-folderId" value="${escapeHtml(st.folderId)}" required>
+                </div>
+
+                <div style="border-top:1px solid rgba(109,165,192,0.2); padding-top:14px; margin-top:6px; display:flex; justify-content:flex-end; gap:10px;">
+                  <button type="button" class="btn alt" onclick="closeModal()">Cancel</button>
+                  <button type="submit" class="btn">Save Settings</button>
+                </div>
+              </form>
+            </div>
+          `;
+        });
+        overlayContainer.appendChild(modal);
+      }
+
+      // Export Modal (Overlay A)
+      if (S.modal === 'export') {
+        const modal = document.createElement('div');
+        modal.className = 'overlay-backdrop';
+        modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+        modal.innerHTML = `
+          <div class="card modal-box">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+              <h3 style="font-size:20px;">Export Voter Records</h3>
+              <button type="button" class="btn alt sm" onclick="closeModal()">×</button>
+            </div>
+
+            <form onsubmit="executeExport(event)" style="display:flex; flex-direction:column; gap:16px;">
+              <div>
+                <label style="display:block; font-size:13px; font-weight:600; color:var(--mist); margin-bottom:8px;">Choose Format</label>
+                <div style="display:grid; grid-template-columns: repeat(4, 1fr); gap:8px;">
+                  <label style="cursor:pointer; text-align:center;">
+                    <input type="radio" name="expFormat" value="pdf" checked style="display:none;" onchange="updateExportOptionsUI()">
+                    <div class="btn alt sm" id="exp-lbl-pdf" style="width:100%; border-color:var(--bright); color:#fff; background:var(--teal);">PDF</div>
+                  </label>
+                  <label style="cursor:pointer; text-align:center;">
+                    <input type="radio" name="expFormat" value="excel" style="display:none;" onchange="updateExportOptionsUI()">
+                    <div class="btn alt sm" id="exp-lbl-excel" style="width:100%;">Excel</div>
+                  </label>
+                  <label style="cursor:pointer; text-align:center;">
+                    <input type="radio" name="expFormat" value="csv" style="display:none;" onchange="updateExportOptionsUI()">
+                    <div class="btn alt sm" id="exp-lbl-csv" style="width:100%;">CSV</div>
+                  </label>
+                  <label style="cursor:pointer; text-align:center;">
+                    <input type="radio" name="expFormat" value="print" style="display:none;" onchange="updateExportOptionsUI()">
+                    <div class="btn alt sm" id="exp-lbl-print" style="width:100%;">Print</div>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <label style="display:block; font-size:13px; font-weight:600; color:var(--mist); margin-bottom:6px;">Records Scope</label>
+                <div style="display:flex; gap:16px; font-size:13.5px;">
+                  <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                    <input type="radio" name="expRecords" value="all" checked style="width:auto;"> All records
+                  </label>
+                  <label style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+                    <input type="radio" name="expRecords" value="filtered" style="width:auto;"> Only filtered / searched
+                  </label>
+                </div>
+              </div>
+
+              <div id="pdf-extra-options" style="display:flex; flex-direction:column; gap:12px; background:rgba(7,46,51,0.5); padding:12px; border-radius:14px;">
+                <label style="display:flex; align-items:center; gap:8px; cursor:pointer; font-size:13.5px;">
+                  <input type="checkbox" id="exp-include-images" style="width:auto;"> Include card images (PDF only)
+                </label>
+
+                <div>
+                  <label style="display:block; font-size:12px; font-weight:600; margin-bottom:4px;">PDF Pages</label>
+                  <div style="display:flex; gap:12px; align-items:center; font-size:13px;">
+                    <label style="display:flex; align-items:center; gap:4px;"><input type="radio" name="expPages" value="all" checked style="width:auto;"> All</label>
+                    <label style="display:flex; align-items:center; gap:4px;"><input type="radio" name="expPages" value="current" style="width:auto;"> Current page</label>
+                    <label style="display:flex; align-items:center; gap:4px;">
+                      <input type="radio" name="expPages" value="range" style="width:auto;"> Range
+                      <input type="number" id="exp-range-start" placeholder="1" min="1" style="width:50px; padding:4px 6px; font-size:12px;">–
+                      <input type="number" id="exp-range-end" placeholder="10" min="1" style="width:50px; padding:4px 6px; font-size:12px;">
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:8px;">
+                <button type="button" class="btn alt" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn" id="btn-do-download">Download</button>
+              </div>
+            </form>
+          </div>
+        `;
+        overlayContainer.appendChild(modal);
+      }
+
+      // Location Paste Modal
+      if (S.modal === 'loc-paste') {
+        const modal = document.createElement('div');
+        modal.className = 'overlay-backdrop';
+        modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+        modal.innerHTML = `
+          <div class="card modal-box">
+            <h3 style="font-size:20px; margin-bottom:8px;">Paste Locations Text</h3>
+            <p style="font-size:13px; color:var(--mu); margin-bottom:12px;">
+              Paste raw text from your Borno State breakdown document or table.
+            </p>
+            <textarea id="paste-loc-textarea" rows="10" placeholder="LGA: MAIDUGURI CODE: 15&#10;1 SHEHURI NORTH 01 SHEHU'S PALACE I&#10;..."></textarea>
+            <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:14px;">
+              <button type="button" class="btn alt" onclick="closeModal()">Cancel</button>
+              <button type="button" class="btn" onclick="handlePasteLocationSubmit()">Parse & Preview</button>
+            </div>
+          </div>
+        `;
+        overlayContainer.appendChild(modal);
+      }
+
+      // Location Manual Modal
+      if (S.modal === 'loc-manual') {
+        const modal = document.createElement('div');
+        modal.className = 'overlay-backdrop';
+        modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+        modal.innerHTML = `
+          <div class="card modal-box">
+            <h3 style="font-size:20px; margin-bottom:14px;">Add Location Manually</h3>
+            <form onsubmit="handleManualLocationSubmit(event)" style="display:flex; flex-direction:column; gap:12px;">
+              <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px;">
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">State</label>
+                  <input type="text" id="mloc-state" value="Borno" required>
+                </div>
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">State Code</label>
+                  <input type="text" id="mloc-stateCode" value="08" required>
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px;">
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">LGA Name *</label>
+                  <input type="text" id="mloc-lga" required placeholder="e.g. MAIDUGURI">
+                </div>
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">LGA Code *</label>
+                  <input type="text" id="mloc-lgaCode" required placeholder="e.g. 15">
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px;">
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">Ward Name *</label>
+                  <input type="text" id="mloc-ward" required placeholder="e.g. SHEHURI NORTH">
+                </div>
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">Ward Code *</label>
+                  <input type="text" id="mloc-wardCode" required placeholder="e.g. 01">
+                </div>
+              </div>
+
+              <div style="display:grid; grid-template-columns: 2fr 1fr; gap:10px;">
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">Polling Unit</label>
+                  <input type="text" id="mloc-pu" placeholder="e.g. SHEHU'S PALACE I">
+                </div>
+                <div>
+                  <label style="font-size:12px; font-weight:600; color:var(--mu);">PU Code</label>
+                  <input type="text" id="mloc-puCode" placeholder="001">
+                </div>
+              </div>
+
+              <div style="display:flex; justify-content:flex-end; gap:10px; margin-top:10px;">
+                <button type="button" class="btn alt" onclick="closeModal()">Cancel</button>
+                <button type="submit" class="btn">Save to Registry</button>
+              </div>
+            </form>
+          </div>
+        `;
+        overlayContainer.appendChild(modal);
+      }
+
+      // Location Preview Modal
+      if (S.modal === 'loc-preview' && S.importPreview) {
+        const modal = document.createElement('div');
+        modal.className = 'overlay-backdrop';
+        modal.onclick = (e) => { if (e.target === modal) closeModal(); };
+
+        // Group by LGA
+        const lgaMap = new Map();
+        S.importPreview.items.forEach(item => {
+          const key = `${item.lgaName}|${item.lgaCode}`;
+          if (!lgaMap.has(key)) {
+            lgaMap.set(key, { name: item.lgaName, code: item.lgaCode, count: 0 });
+          }
+          lgaMap.get(key).count++;
+        });
+
+        modal.innerHTML = `
+          <div class="card modal-box" style="max-width: 720px;">
+            <div style="margin-bottom:14px;">
+              <h3 style="font-size:22px;">Import preview — ${escapeHtml(S.importPreview.fileName)}</h3>
+              <p style="font-size:13px; color:var(--mu);">Nothing is saved until Confirm.</p>
+            </div>
+
+            <!-- Unreadable pages warning strip -->
+            ${S.importPreview.unreadablePages && S.importPreview.unreadablePages.length > 0 ? `
+              <div class="warning-strip">
+                <div>
+                  <b>⚠ Unreadable pages:</b> Pages ${S.importPreview.unreadablePages.join(', ')} had no extractable text.
+                </div>
+                <div style="display:flex; gap:8px;">
+                  <button type="button" class="btn sm" onclick="tryOcrOnUnreadablePages()">Try OCR on these pages</button>
+                  <button type="button" class="btn alt sm" onclick="skipUnreadablePages()">Skip them</button>
+                </div>
+              </div>
+            ` : ''}
+
+            <!-- Summary Table -->
+            <div style="max-height: 280px; overflow-y: auto; border: 1px solid rgba(109,165,192,0.25); border-radius: 14px; margin: 14px 0;">
+              <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
+                <thead>
+                  <tr style="background: rgba(7,46,51,0.9); color: var(--mist); text-align: left;">
+                    <th style="padding: 10px;">LGA</th>
+                    <th style="padding: 10px;">CODE</th>
+                    <th style="padding: 10px;">WARDS</th>
+                    <th style="padding: 10px;">STATUS</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${Array.from(lgaMap.values()).map(l => `
+                    <tr style="border-bottom: 1px solid rgba(109,165,192,0.15);">
+                      <td style="padding: 9px 10px; font-weight: 600;">${escapeHtml(l.name)}</td>
+                      <td style="padding: 9px 10px; font-family: monospace;">${escapeHtml(l.code || '—')}</td>
+                      <td style="padding: 9px 10px;">${l.count}</td>
+                      <td style="padding: 9px 10px;">
+                        <span class="tag green">● New</span>
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px; margin-top:16px;">
+              <button type="button" class="btn alt sm" onclick="downloadErrorReport()">Download error report</button>
+              <div style="display:flex; gap:8px;">
+                <button type="button" class="btn alt" onclick="closeModal()">Cancel</button>
+                <button type="button" class="btn" onclick="confirmLocationImport()">Confirm import</button>
+              </div>
+            </div>
+          </div>
+        `;
+        overlayContainer.appendChild(modal);
+      }
+    }
+
+    function updateExportOptionsUI() {
+      const selected = document.querySelector('input[name="expFormat"]:checked')?.value;
+      ['pdf', 'excel', 'csv', 'print'].forEach(f => {
+        const btn = document.getElementById(`exp-lbl-${f}`);
+        if (btn) {
+          if (f === selected) {
+            btn.style.background = 'var(--teal)';
+            btn.style.color = '#fff';
+            btn.style.borderColor = 'var(--bright)';
+          } else {
+            btn.style.background = 'transparent';
+            btn.style.color = 'var(--mist)';
+            btn.style.borderColor = 'var(--mist)';
+          }
+        }
+      });
+      const pdfOpts = document.getElementById('pdf-extra-options');
+      if (pdfOpts) pdfOpts.style.display = (selected === 'pdf') ? 'flex' : 'none';
+      const dlBtn = document.getElementById('btn-do-download');
+      if (dlBtn) dlBtn.innerText = (selected === 'print') ? 'Print' : 'Download';
+    }
+
+    async function saveSettingsForm(e) {
+      e.preventDefault();
+      const syncUrl = document.getElementById('st-syncUrl').value.trim();
+      const sheetId = document.getElementById('st-sheetId').value.trim();
+      const folderId = document.getElementById('st-folderId').value.trim();
+
+      await dbPut('settings', { key: 'syncUrl', value: syncUrl });
+      await dbPut('settings', { key: 'sheetId', value: sheetId });
+      await dbPut('settings', { key: 'folderId', value: folderId });
+
+      toast("Sync settings saved!", "success");
+      closeModal();
+      R();
+    }
+
+    function handlePasteLocationSubmit() {
+      const text = document.getElementById('paste-loc-textarea').value;
+      if (!text.trim()) {
+        toast("Please paste text first.", "warning");
+        return;
+      }
+      const items = parseLocationText(text);
+      if (items.length === 0) {
+        toast("Could not extract any LGA/Ward blocks. Check text formatting.", "error");
+        return;
+      }
+      S.importPreview = {
+        fileName: "Pasted text",
+        items: items,
+        unreadablePages: []
+      };
+      openModal('loc-preview');
+    }
+
+    async function handleManualLocationSubmit(e) {
+      e.preventDefault();
+      const item = {
+        stateName: document.getElementById('mloc-state').value.trim(),
+        stateCode: document.getElementById('mloc-stateCode').value.trim(),
+        lgaName: document.getElementById('mloc-lga').value.trim().toUpperCase(),
+        lgaCode: document.getElementById('mloc-lgaCode').value.trim(),
+        wardName: document.getElementById('mloc-ward').value.trim().toUpperCase(),
+        wardCode: document.getElementById('mloc-wardCode').value.trim(),
+        puName: document.getElementById('mloc-pu').value.trim().toUpperCase() || 'Collation Centre PU',
+        puCode: document.getElementById('mloc-puCode').value.trim() || document.getElementById('mloc-wardCode').value.trim()
+      };
+      await dbPut('registry', item);
+      toast("Location saved to registry!", "success");
+      closeModal();
+      R();
+    }
+
+    async function confirmLocationImport() {
+      if (!S.importPreview || !S.importPreview.items) return;
+      toast(`Importing ${S.importPreview.items.length} locations...`, "info");
+      for (const item of S.importPreview.items) {
+        await dbPut('registry', item);
+      }
+      toast(`Registry updated with ${S.importPreview.items.length} records!`, "success");
+      S.importPreview = null;
+      closeModal();
+      R();
+    }
+
+    async function tryOcrOnUnreadablePages() {
+      if (!S.importPreview || !S.importPreview.fileRef || !window.pdfjsLib || !window.Tesseract) {
+        toast("OCR libraries not available.", "error");
+        return;
+      }
+      toast("Rendering pages for OCR. This may take a few moments...", "info", 5000);
+      try {
+        const arrayBuffer = await S.importPreview.fileRef.arrayBuffer();
+        const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+        let ocrFullText = "";
+
+        for (const pageNum of S.importPreview.unreadablePages) {
+          const page = await pdf.getPage(pageNum);
+          const viewport = page.getViewport({ scale: 1.5 });
+          const canvas = document.createElement('canvas');
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+          const ctx = canvas.getContext('2d');
+          await page.render({ canvasContext: ctx, viewport: viewport }).promise;
+
+          const res = await Tesseract.recognize(canvas, 'eng');
+          ocrFullText += "\n" + res.data.text;
+        }
+
+        const ocrItems = parseLocationText(ocrFullText);
+        if (ocrItems.length > 0) {
+          S.importPreview.items.push(...ocrItems);
+          S.importPreview.unreadablePages = [];
+          toast(`OCR recovered ${ocrItems.length} locations!`, "success");
+        } else {
+          toast("OCR completed but could not detect structured LGA/Ward blocks.", "warning");
+        }
+        renderModals();
+      } catch (err) {
+        toast(`OCR failed: ${err.message}`, "error");
+      }
+    }
+
+    function skipUnreadablePages() {
+      if (S.importPreview) {
+        S.importPreview.unreadablePages = [];
+        renderModals();
+      }
+    }
+
+    function downloadErrorReport() {
+      const report = `MOBILIZE LOCATION IMPORT REPORT\nFile: ${S.importPreview?.fileName}\nDate: ${new Date().toLocaleString()}\nExtracted Items: ${S.importPreview?.items?.length || 0}\nUnreadable Pages: ${S.importPreview?.unreadablePages?.join(', ') || 'None'}\n`;
+      const blob = new Blob([report], { type: 'text/plain;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `error_report_${Date.now()}.txt`;
+      a.click();
+    }
+
+    // ─────────────────────────────────────────────────────────────────
+    // EXPORT ENGINE (PDF, EXCEL, CSV, PRINT)
+    // ─────────────────────────────────────────────────────────────────
+    async function executeExport(e) {
+      e.preventDefault();
+      const format = document.querySelector('input[name="expFormat"]:checked')?.value || 'pdf';
+      const scope = document.querySelector('input[name="expRecords"]:checked')?.value || 'all';
+      const includeImages = document.getElementById('exp-include-images')?.checked;
+
+      let rows = await dbAll('rows');
+      if (scope === 'filtered') {
+        if (S.tableFilter === 'flagged') rows = rows.filter(r => r.flags && r.flags.length > 0);
+        else if (S.tableFilter === 'pending') rows = rows.filter(r => r.sync === 'pending' || !r.sync);
+        else if (S.tableFilter === 'synced') rows = rows.filter(r => r.sync === 'synced');
+        else if (S.tableFilter === 'error') rows = rows.filter(r => r.sync === 'error');
+
+        if (S.tableSearch.trim()) {
+          const q = S.tableSearch.toLowerCase().trim();
+          rows = rows.filter(r => 
+            (r.name && r.name.toLowerCase().includes(q)) ||
+            (r.contact && r.contact.includes(q)) ||
+            (r.lga && r.lga.toLowerCase().includes(q))
+          );
+        }
+      }
+
+      closeModal();
+
+      if (format === 'print') {
+        window.print();
+        return;
+      }
+
+      if (format === 'csv') {
+        exportCSV(rows);
+      } else if (format === 'excel') {
+        exportExcel(rows);
+      } else if (format === 'pdf') {
+        await exportPDF(rows, includeImages);
+      }
+    }
+
+    // 11 Exact SA Columns:
+    // S/N · NAME · PORTFOLIO/MDA · L.G.A · Code · WARD · Code · POLLING UNIT · Code · CONTACT NO · 2nd CONTACT
+    function exportCSV(rows) {
+      const headers = ["S/N", "NAME", "PORTFOLIO/MDA", "L.G.A", "Code", "WARD", "Code", "POLLING UNIT", "Code", "CONTACT NO", "2nd CONTACT"];
+      const lines = [headers.map(h => `"${h}"`).join(",")];
+
+      rows.forEach((r, idx) => {
+        const rowData = [
+          r.sn || (idx + 1),
+          r.name || '',
+          r.portfolio || '',
+          r.lga || '',
+          r.lgaCode || '',
+          r.ward || '',
+          r.wardCode || '',
+          r.pu || '',
+          r.puCode || '',
+          r.contact ? `\t${r.contact}` : '', // Tab prefix ensures phone leading zero preserved in CSV
+          r.contact2 ? `\t${r.contact2}` : ''
+        ];
+        lines.push(rowData.map(v => `"${String(v).replace(/"/g, '""')}"`).join(","));
+      });
+
+      // UTF-8 BOM
+      const csvContent = "\uFEFF" + lines.join("\r\n");
+      const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mobilized_voters_${Date.now()}.csv`;
+      a.click();
+    }
+
+    function exportExcel(rows) {
+      if (!window.XLSX) {
+        toast("SheetJS library not loaded.", "error");
+        return;
+      }
+      const headers = ["S/N", "NAME", "PORTFOLIO/MDA", "L.G.A", "Code", "WARD", "Code", "POLLING UNIT", "Code", "CONTACT NO", "2nd CONTACT"];
+      const data = [headers];
+
+      rows.forEach((r, idx) => {
+        data.push([
+          String(r.sn || (idx + 1)),
+          r.name || '',
+          r.portfolio || '',
+          r.lga || '',
+          String(r.lgaCode || ''),
+          r.ward || '',
+          String(r.wardCode || ''),
+          r.pu || '',
+          String(r.puCode || ''),
+          String(r.contact || ''),
+          String(r.contact2 || '')
+        ]);
+      });
+
+      const ws = XLSX.utils.aoa_to_sheet(data);
+
+      // Force type "s" (string) on all codes and contact cells to protect leading zeros
+      for (let R = 1; R < data.length; ++R) {
+        [4, 6, 8, 9, 10].forEach(C => {
+          const cellRef = XLSX.utils.encode_cell({ c: C, r: R });
+          if (ws[cellRef]) {
+            ws[cellRef].t = 's';
+          }
+        });
+      }
+
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, "Mobilized Voters");
+      XLSX.writeFile(wb, `mobilized_voters_${Date.now()}.xlsx`);
+    }
+
+    async function exportPDF(rows, includeImages) {
+      if (!window.jspdf || !window.jspdf.jsPDF) {
+        toast("jsPDF library not loaded.", "error");
+        return;
+      }
+      toast("Generating PDF...", "info", 3000);
+
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF('landscape', 'pt', 'a4');
+
+      const title = `MOBILIZED VOTERS — ${S.tableFilter.toUpperCase()} — ${new Date().toLocaleDateString()}`;
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(14);
+      doc.setTextColor(12, 112, 117);
+      doc.text(title, 40, 36);
+
+      const headers = [
+        ["S/N", "NAME", "PORTFOLIO", "L.G.A", "Code", "WARD", "Code", "POLLING UNIT", "Code", "CONTACT NO", "2nd CONTACT"]
+      ];
+
+      const body = rows.map((r, idx) => [
+        r.sn || (idx + 1),
+        r.name || '',
+        r.portfolio || '',
+        r.lga || '',
+        r.lgaCode || '',
+        r.ward || '',
+        r.wardCode || '',
+        r.pu || '',
+        r.puCode || '',
+        r.contact || '',
+        r.contact2 || ''
+      ]);
+
+      doc.autoTable({
+        head: headers,
+        body: body,
+        startY: 50,
+        theme: 'grid',
+        styles: { fontSize: 8.5, cellPadding: 4, font: 'helvetica' },
+        headStyles: { fillColor: [12, 112, 117], textColor: [255, 255, 255], fontStyle: 'bold' },
+        alternateRowStyles: { fillColor: [240, 248, 250] },
+        margin: { left: 40, right: 40 }
+      });
+
+      doc.save(`mobilized_voters_${Date.now()}.pdf`);
+      toast("PDF downloaded!", "success");
+    }
+
+    // Helper to download the current single HTML file directly
+    function downloadMobilizeHtml() {
+      const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = "Mobilize.html";
+      a.click();
+      toast("Saved Mobilize.html! Ready to host on cPanel public_html.", "success");
+    }
+
+    // Utility HTML Escaper
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    // Initialize application on window load
+    window.addEventListener('DOMContentLoaded', async () => {
+      await initSettingsAndRegistry();
+      await R();
+    });
+  </script>
+</body>
+</html>
